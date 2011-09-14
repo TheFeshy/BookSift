@@ -23,7 +23,7 @@ if __name__ == '__main__':
             msg = raw_input('Enter commit message')
             status, output = commands.getstatusoutput('git commit -m "{0}"'.format(msg))
             print output
-            if status:
+            if status and not output.find('nothing to commit'):
                 print 'Error commiting to Git; stopping here'
             else:
-                pass
+                print 'Devtool completed.'
