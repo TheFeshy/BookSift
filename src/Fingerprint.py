@@ -9,39 +9,22 @@ import re
 from array import array
 
 from Exceptions import InvalidType, EmptyBook, DifferentHashes
-import utility
+import Utility
 
 class Fingerprint:
-    '''This class stores a hash value, and the index of the location which it originally appeared'''
-    class UniqueWordPosition:
-        def __init__(self, hash, index):
-            self.hash = hash
-            self.index = index
-        def __eq__(self,rhs):
-            return self.hash == rhs.hash
-        def __hash__(self):
-            return hash(self.hash)
-        def __ne__(self, rhs):
-            return not self == rhs
     '''Takes the contents of a book (in text form) to initialize'''
-    def __build_unique_frozen_set(self):
-        temp = []
-        for i,h in enumerate(self.__importantwords):
-            temp.add(Fingerprint.UniqueWordPosition(h,i))
-        return temp
-    def __init__(self, book, important_words='unique', hash_function=hash):
-        if 'unique' == important_words:
-            self.__importantwords = self.__get_unique_words(book, hash_function)
-        else:
-            raise InvalidType('Unsupported method of identifying important words for fingerprint')
+    def __init__(self, book, hash_function=hash):
+        #Get all unqiue words in the document
+        self.__importantwords = self.__get_unique_words(book, hash_function)
         if not len(self.__importantwords):
             raise EmptyBook("Unable to locate alphabetical text to compare.")
+        #Create a dictionary (which doubles as a 'set') of all the unique words,
+        #and their index (the order they appear is important)
         self.__importantset = {}
         for i,c in enumerate(self.__importantwords):
             self.__importantset[c] = i
-        #self.__importantset = self.__build_unique_frozen_set()
         self.__booklength = len(book)
-        self.hashcheck = Fingerprint.hashcheck_from_options(important_words, hash_function) #Used to verify hash algorithm is the same in case of serialization
+        self.hashcheck = hash_function('magicvalue')
     '''Determines the relationship with another Fingerprint, using optional thresholds
        parameters:
        method determins the method used.  the default is 'dl' for a Damerau-Levenshtein comparison
@@ -78,10 +61,6 @@ class Fingerprint:
                 return 'N',1.0-score
         else:
             return 'N',1.0
-    @staticmethod
-    def hashcheck_from_options(important_words, hash_function):
-        return hash_function(important_words)
-        
     '''Creates an array consisting of the hashes of the unique words within the book'''
     @staticmethod
     def __get_unique_words(book, my_hash):
@@ -113,11 +92,12 @@ class Fingerprint:
     
     '''This computes a percentage similarity score between two sequences, using the 
        Damerau-Levenshtein distance'''
+    #TODO: depreciated; remove
     @staticmethod
     def __dl_score(seq1, seq2):
         largest = max(len(seq1),len(seq2))
         smallest = min(len(seq1),len(seq2))
-        distance = utility.dl_distance(seq1,seq2)
+        distance = Utility.dl_distance(seq1,seq2)
         differences = distance - (largest - smallest) #correct for differences in size
         return 1.0-(differences/smallest)
 
@@ -128,6 +108,8 @@ class Fingerprint:
        count it towards our score.'''
     @staticmethod
     def __lcs_custom(seq1,set2, threshold = 3):
+        #TODO: change method to take both sets of sequences and sets, and choose the shortest for our search
+        #TODO: when we make the above change, we can integrate "quick_compare" with this function as well
         totalscore = 0
         bestpossible = min (len(seq1),len(set2))
         nextexpected = 0 #The index of the next character, if the sequences match

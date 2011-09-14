@@ -163,10 +163,8 @@ class FingerprintTest(unittest.TestCase):
         self.assertRaises(EmptyBook, Fingerprint, self.books['emptybook']) 
     def test_numericbook(self): #Books that have no alphabetical characters should fail to be fingerprinted
         self.assertRaises(EmptyBook, Fingerprint, self.books['numericbook'])
-    def test_invalidimportantwords(self): #If we try to use an incorrect method of IDing important words the fingerprint should fail
-        self.assertRaises(InvalidType, Fingerprint, self.books['book1'],'madeuptype')
     def test_differenthash(self): #Verify that trying to compare fingerprings with different hashes fails
-        self.assertRaises(DifferentHashes, self.fingerprints['book1'].compare_with, Fingerprint(self.books['book1'], 'unique', FingerprintTest.uselesshash))
+        self.assertRaises(DifferentHashes, self.fingerprints['book1'].compare_with, Fingerprint(self.books['book1'], FingerprintTest.uselesshash))
     def test_compareidentical(self): #Verify that identical books are marked as matches
         self.assertEqual(self.fingerprints['book1'].compare_with(self.fingerprints['book1'])[0],'M')
     def test_comparenomatch(self): #Verify that different books are *not* marked as matches
@@ -185,15 +183,11 @@ class FingerprintTest(unittest.TestCase):
         self.assertEqual(self.fingerprints['book1partialerrors'].compare_with(self.fingerprints['book1'])[0],'B')
     def test_unsupportedcomparison(self): #Verify that we fail on attempting to use a non-existent comparison type
         self.assertRaises(InvalidType, self.fingerprints['book1'].compare_with, Fingerprint(self.books['book1']), 'not a coparison method')
-    def test_hashcheckgeneration(self): #Verify that the hash check we create is the same one the fingerprint uses for a given set of options
-        self.assertEqual(Fingerprint(self.books['book1'],'unique',hash).hashcheck, Fingerprint.hashcheck_from_options('unique',hash))
-    def test_hashcheckmismatch(self): #Verify that the hash check isn't just spitting out a set number, and will identify if we feed it garbage
-        self.assertNotEqual(Fingerprint(self.books['book1'],'unique',hash).hashcheck, Fingerprint.hashcheck_from_options('unique',FingerprintTest.uselesshash))
-
+ 
 class BookTestShort(unittest.TestCase):
     def test_failstoreadnonexistantfile(self): #make sure we raise the proper exception if a file doesn't exist or can't be read
         book = Book(textfile='invalidfile.txt')
-        self.assertRaises(CantGetText, book.initialize_text_data, 'unique',hash)
+        self.assertRaises(CantGetText, book.initialize_text_data,hash)
         
 class BookTest(unittest.TestCase):
     def setUp(self):
@@ -201,7 +195,7 @@ class BookTest(unittest.TestCase):
         self.booknames = SetUpTestBooks()
         for bookname,bookpath in self.booknames.iteritems():
             self.books[bookname]=Book(textfile=bookpath)
-            self.books[bookname].initialize_text_data('unique', hash)
+            self.books[bookname].initialize_text_data()
     def tearDown(self):
         CleanUpTestBooks()
     def test_identicalbooks(self): #Verify we match identical books

@@ -9,12 +9,13 @@ class Book:
     '''Parameters:
        id is the calibre id, or 0 if not using calibre
        textfile is a path to the text file, if id is 0'''
+    #TODO: impliment __getstate__ and __setstate__ for smaller pickling
     def __init__(self, calibreid=0, textfile=''):
         self.id = uuid.uuid1()
         self.__textfilepath = None
         self.__calibreid = calibreid
         
-        self.__fingerprintlist = []
+        self.__fingerprint = None
         
         self.__matches = set()
         self.__supersetof = set()
@@ -40,32 +41,15 @@ class Book:
             self.statusmsg = errtxt
             self.__skip = True
             raise CantGetText(errtxt)
-    '''Looks through fingerprints in our list to see if it has the correct fingerprint to use'''
-    def __get_correct_fingerprint(self, method_hash):
-        for fp in self.__fingerprintlist: #Linear search; we will usually have one, at most two or three
-            if fp.hashcheck == method_hash:
-                return fp
-        return None #Otherwise, return nothing
     '''Converts the book to text, and reads in the necessary data.
        Will raise a CantGetText if it can't get text.'''
-    def initialize_text_data(self, important_words = 'unique', hash_function=hash):
+    def initialize_text_data(self, hash_function=hash):
         if not self.__skip:
-            hashcheck = Fingerprint.hashcheck_from_options(important_words, hash_function)
-            if not self.__get_correct_fingerprint(hashcheck):
-                self.__fingerprintlist.append(Fingerprint(self.__get_book_as_text(), important_words, hash_function))
+            if not self.__fingerprint:
+                self.__fingerprint = Fingerprint(self.__get_book_as_text(), hash_function)
             else:
                 pass #If we already have a fingerprint of the correct type, do nothing.
             #TODO: create new quote list
-    '''In case books support multiple fingerprints for testing, allow a "preferred" one to be set.'''
-    def set_prefered_fingerprint(self, method_hash):
-        for i,fp in enumerate(self.__fingerprintlist):
-            if fp.hashcheck == method_hash and not i == 0: #If we find the hash somewhere other than the first slot, swap it:
-                tmp = fp
-                self.__fingerprintlist[i] = self.__fingerprintlist[0]
-                self.__fingerprintlist[0] = tmp
-            if self.__fingerprintlist[0].hashckech == method_hash:
-                return True
-        return False
     '''Finds a fingerprint with a hashcheck in common with one of our local fingerprints (if it exists)'''
     def __match_fingerprints(self, book2):
         for fp1 in self.__fingerprintlist:
@@ -89,8 +73,9 @@ class Book:
         preexisting = self.__get_existing_relationship(book2)
         if preexisting:
             return preexisting
-        fp1, fp2 = self.__match_fingerprints(book2)
-        result = fp1.compare_with(fp2)
+        if not self.__fingerprint and not book2.__fingerprint:
+            raise NotInitialized('Attempted to compare books that have not been fingerprinted, or that do not have comparable fingerprints')
+        result = self.__fingerprint.compare_with(book2.__fingerprint)
         if result[0] == 'M':
             self.__matches.add(book2.id)
             book2.__matches.add(self.id)
