@@ -229,8 +229,7 @@ class BookTest(unittest.TestCase):
         self.assertTrue(runtime < 1.0)
                 
 
-if __name__ == '__main__':
-    
+def runTests():
     shorttests = (FingerprintTest, BookTestShort)
     
     longtests = (BookTest,)
@@ -239,11 +238,21 @@ if __name__ == '__main__':
     for test in shorttests:
         shortsuite.addTest(unittest.makeSuite(test, 'test'))
     runner = unittest.TextTestRunner()
-    runner.run(shortsuite)
+    testresults = runner.run(shortsuite)
+    if testresults.failures or testresults.errors:
+        print 'Did not pass quick check; skipping longer checks'
+        return False
     longsuite = unittest.TestSuite()
     for test in longtests:
         longsuite.addTest(unittest.makeSuite(test, 'test'))
-    runner.run(longsuite)
+    testresults = runner.run(longsuite)
+    if testresults.failures or testresults.errors:
+        return False
+    return True
+
+if __name__ == '__main__':
+    
+    runTests()
     
     
         
