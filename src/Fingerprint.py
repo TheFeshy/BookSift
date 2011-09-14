@@ -8,8 +8,7 @@ from __future__ import division #needed so that integer/integer = float
 import re
 from array import array
 
-from Exceptions import InvalidType, EmptyBook, DifferentHashes
-import Utility
+from Exceptions import EmptyBook, DifferentHashes
 
 class Fingerprint:
     '''Takes the contents of a book (in text form) to initialize'''
@@ -39,28 +38,20 @@ class Fingerprint:
        'M' if this book is a Match of the second book
        exceptions:
        Can throw DifferentHashes if the fingerprints were hashed using incompatible hashes.'''
-    def compare_with(self,fp2,method='lcs_custom',quick_threshold=.75,long_threshold=.6,match_threshold=.75):
+    def compare_with(self,fp2,quick_threshold=.75,long_threshold=.6):
         if not self.hashcheck == fp2.hashcheck:
             raise DifferentHashes('Attempted to compare two fingerprints that have been created using different hashes')
-        if self.__quick_compare(self.__importantset,fp2.__importantset,quick_threshold):
-            if method == 'dl':
-                score = Fingerprint.__dl_score(self.__importantwords, fp2.__importantwords)
-            elif method == 'lcs_custom':
-                score = Fingerprint.__lcs_custom(self.__importantwords, fp2.__importantset)
+        score = Fingerprint.__lcs_custom(self.__importantwords, self.__importantset, fp2.__importantwords, fp2.__importantset, quick_threshold)
+        if long_threshold < score:
+            #We have a book that matches, let's see what the relationship is:
+            if min(self.__booklength,fp2.__booklength)/max(self.__booklength, fp2.__booklength) > long_threshold:
+                return 'M', score
+            elif self.__booklength > fp2.__booklength:
+                return 'P',score
             else:
-                raise InvalidType('Attempted to compare fingerprints using an unsupported method')
-            if long_threshold < score:
-                #We have a book that matches, let's see what the relationship is:
-                if min(self.__booklength,fp2.__booklength)/max(self.__booklength, fp2.__booklength) > match_threshold:
-                    return 'M', score
-                elif self.__booklength > fp2.__booklength:
-                    return 'P',score
-                else:
-                    return 'B',score
-            else:
-                return 'N',1.0-score
+                return 'B',score
         else:
-            return 'N',1.0
+            return 'N',1.0-score
     '''Creates an array consisting of the hashes of the unique words within the book'''
     @staticmethod
     def __get_unique_words(book, my_hash):
@@ -79,56 +70,51 @@ class Fingerprint:
             if isunique[word]:
                 uniquewords.append(my_hash(word))
         #Array used to save space.  Array type is dependent on hash values though!
+        #TODO: make this use the correct size on 32 bit systems
         return array('l',uniquewords)
-
-    '''If given two sets of words, will determine if a relationship is even possible
-       A match is possible if the number of similar words make up a certain threshold
-       of the shortest book.'''
-    @staticmethod
-    def __quick_compare(set1, set2, threshold):
-        score = len(dict.fromkeys(x for x in set1 if x in set2)) #Get intersection of the two sets
-        bestpossible = min(len(set1), len(set2))
-        return threshold < (score/bestpossible)
-    
-    '''This computes a percentage similarity score between two sequences, using the 
-       Damerau-Levenshtein distance'''
-    #TODO: depreciated; remove
-    @staticmethod
-    def __dl_score(seq1, seq2):
-        largest = max(len(seq1),len(seq2))
-        smallest = min(len(seq1),len(seq2))
-        distance = Utility.dl_distance(seq1,seq2)
-        differences = distance - (largest - smallest) #correct for differences in size
-        return 1.0-(differences/smallest)
 
     '''This function is based on a modified version of a longest common sequence search.
        Since all words are unique within a sequence, we can use a hash lookup instead of
        looping through to find matches.  Also, because we are interested in overall similarity
        more than just the "longest" match, we accumulate any match over a certain length and
-       count it towards our score.'''
+       count it towards our score.
+       
+       meaningful_length is the number of consecutive characters to be considered a meaningful
+       match
+       quick_threshold is the percentage of words that must be present in both sets'''
     @staticmethod
-    def __lcs_custom(seq1,set2, threshold = 3):
-        #TODO: change method to take both sets of sequences and sets, and choose the shortest for our search
-        #TODO: when we make the above change, we can integrate "quick_compare" with this function as well
+    def __lcs_custom(seq1 ,set1, seq2, set2, quick_threshold = 0.7, meaningful_length = 3):
+        #Compare the shortest sequence to the longest hash for efficiency 
+        if len(seq1) < len(seq2):
+            shortseq = seq1
+            longset = set2
+        else:
+            shortseq = seq2
+            longset = set1
+        #TODO: We might replace this "quick check" with a counter in the longer check that causes 
+            #early exit if the sequence checked so far, minus the total score, exceeds the allowed 
+            #threshold.  Test possible speedups with real world data.
+        if len(dict.fromkeys(x for x in set1 if x in set2))/len(shortseq) < quick_threshold:
+            return 0 #If we don't meet the minimum number of character matches, drop out early
         totalscore = 0
-        bestpossible = min (len(seq1),len(set2))
+        bestpossible = min (len(shortseq),len(longset))
         nextexpected = 0 #The index of the next character, if the sequences match
         currentscore = 0
-        for c1 in seq1:
-            c2 = set2.get(c1)
-            if c2 == nextexpected: #set2[c1] is our c2
+        for c1 in shortseq:
+            c2 = longset.get(c1)
+            if c2 == nextexpected:
                 currentscore = currentscore + 1
                 nextexpected = nextexpected + 1
             else:
-                if currentscore > threshold:
+                if currentscore > meaningful_length: #We no longer match, but remember how much we have matched so far
                     totalscore = totalscore + currentscore
-                if c2:
+                if c2: #If we at least found a character somewhere in the next sequence, start matching from there
                     nextexpected = c2 + 1
                     currentscore = 1
-                else:
+                else: #If we did not find our character somewhere, we can't start matching again yet.
                     nextexpected = 0
                     currentscore = 0
         else: #Don't forget whatever score remains at the end!
-            if currentscore > threshold:
+            if currentscore > meaningful_length:
                 totalscore = totalscore + currentscore
         return totalscore / bestpossible

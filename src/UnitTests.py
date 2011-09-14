@@ -7,10 +7,12 @@ import unittest
 from zipfile import ZipFile
 import os.path
 import time
+import pickle
 
 from Fingerprint import Fingerprint
 from Exceptions import *
 from Book import Book
+import tempfile
 
 '''This class is used to make 'OCR-like' errors in text files, to make our testing more
    realistic.  It is sloppy test code; please don't use it for anything else.'''
@@ -153,8 +155,9 @@ class FingerprintTest(unittest.TestCase):
         for name,book in self.books.iteritems():
             try:
                 self.fingerprints[name]=Fingerprint(book)
-            except (InvalidType, EmptyBook):
+            except EmptyBook:
                 pass
+
     @staticmethod
     def uselesshash(word):
         return 42
@@ -181,13 +184,15 @@ class FingerprintTest(unittest.TestCase):
         self.assertEqual(self.fingerprints['book1'].compare_with(self.fingerprints['book1partialerrors'])[0],'P')
     def test_comparefuzzysubset(self): #Verify that we can identify if a book is a subset of another book, even with errors
         self.assertEqual(self.fingerprints['book1partialerrors'].compare_with(self.fingerprints['book1'])[0],'B')
-    def test_unsupportedcomparison(self): #Verify that we fail on attempting to use a non-existent comparison type
-        self.assertRaises(InvalidType, self.fingerprints['book1'].compare_with, Fingerprint(self.books['book1']), 'not a coparison method')
- 
+    
 class BookTestShort(unittest.TestCase):
     def test_failstoreadnonexistantfile(self): #make sure we raise the proper exception if a file doesn't exist or can't be read
         book = Book(textfile='invalidfile.txt')
         self.assertRaises(CantGetText, book.initialize_text_data,hash)
+    def test_failstocompareunitializedbooks(self):
+        book1 = Book(textfile='notused.txt')
+        book2 = Book(textfile='alsonotused.txt')
+        self.assertRaises(NotInitialized, book1.compare_with, book2)
         
 class BookTest(unittest.TestCase):
     def setUp(self):
@@ -221,7 +226,25 @@ class BookTest(unittest.TestCase):
         self.books['book0o'].compare_with(self.books['book1e'])
         runtime = time.time() - curtime
         self.assertTrue(runtime < 1.0)
-                
+    def test_matchpickledbook(self): #Verify that books work normally after being pickled
+        tmp = tempfile.TemporaryFile()
+        pickle.dump(self.books['book0o'],tmp,-1)
+        pickle.dump(self.books['book0e'],tmp,-1)
+        tmp.seek(0)
+        pbook0 = pickle.load(tmp)
+        pbook1 = pickle.load(tmp)
+        result = pbook0.compare_with(pbook1)
+        self.assertEqual(result[0],'M')
+    def test_failpickledbook(self): #Verify that books work normally after being pickled
+        tmp = tempfile.TemporaryFile()
+        pickle.dump(self.books['book0o'],tmp,-1)
+        pickle.dump(self.books['book1e'],tmp,-1)
+        tmp.seek(0)
+        pbook0 = pickle.load(tmp)
+        pbook1 = pickle.load(tmp)
+        result = pbook0.compare_with(pbook1)
+        self.assertEqual(result[0],'N')
+        
 
 def runTests():
     shorttests = (FingerprintTest, BookTestShort)

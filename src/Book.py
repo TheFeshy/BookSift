@@ -13,9 +13,10 @@ class Book:
     def __init__(self, calibreid=0, textfile=''):
         self.id = uuid.uuid1()
         self.__textfilepath = None
-        self.__calibreid = calibreid
+        self.calibreid = calibreid
         
         self.__fingerprint = None
+        self.donecomparing = False
         
         self.__matches = set()
         self.__supersetof = set()
@@ -26,7 +27,8 @@ class Book:
         #if we are using this without calibre, or in test mode, use the text file parameter
         if not calibreid:
             self.__textfilepath = textfile
-        #TODO: set skip status via calibre metadata
+        else:
+            TBD('Set skip status via calibre metadata')
     def __get_book_as_text(self):
         filename = None
         if self.__textfilepath:
@@ -49,7 +51,6 @@ class Book:
                 self.__fingerprint = Fingerprint(self.__get_book_as_text(), hash_function)
             else:
                 pass #If we already have a fingerprint of the correct type, do nothing.
-            #TODO: create new quote list
     '''Finds a fingerprint with a hashcheck in common with one of our local fingerprints (if it exists)'''
     def __match_fingerprints(self, book2):
         for fp1 in self.__fingerprintlist:
@@ -69,10 +70,14 @@ class Book:
             return None
     def compare_with(self,book2):
         if self.__skip or book2.__skip:
-            return 'N',100 #Books we ignore are effectively no match
+            return 'N',2 #Books we ignore are effectively no match
+        elif self.id == book2.id:
+            return ('M',2) #technically, comparing a book with itself is a match...but don't add it to relationships; mathematicians asside "identity proofs" are not useful.
         preexisting = self.__get_existing_relationship(book2)
         if preexisting:
             return preexisting
+        elif self.donecomparing and book2.donecomparing:
+            return ('N',2) #If both books are "done" they have already been compared.  If they had a relationship we would have found it already.
         if not self.__fingerprint and not book2.__fingerprint:
             raise NotInitialized('Attempted to compare books that have not been fingerprinted, or that do not have comparable fingerprints')
         result = self.__fingerprint.compare_with(book2.__fingerprint)
