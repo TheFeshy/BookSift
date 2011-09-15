@@ -304,7 +304,7 @@ class UtilityTestLong(unittest.TestCase):
                     total = total + n1 + n2
         testarray2 = [-1 for unused in range(50)]
         l = threading.Lock()
-        t = threading.Thread(target=slowarray, args=((testarray2,),l,0.08))
+        t = threading.Thread(target=slowarray, args=((testarray2,),l,0.04))
         t.start()
         result = [0,]
         Utility.compare_all_despite_starvation(testarray2, len(testarray2), testfunc, 0.02, (result,l))

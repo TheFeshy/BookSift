@@ -13,10 +13,10 @@
      allow us to not waste too much time.  It still won't saturate your eight-core
      hypterthreaded beast though.'''
 
-import time
 
 from Exceptions import NotInitialized
 import Book
+import Utility
      
 '''This thread handles making sure the book fingerprints get generated.'''     
 def fingerprint_initializer(library, bookids):
@@ -26,30 +26,35 @@ def fingerprint_initializer(library, bookids):
         library.update_book_uid(book.id)
         #TODO: put in "exit command" code
 
+def book_compare_helper(bookid1, bookid2, args, kwargs):
+    library = args[0]
+    book1 = library.get_book_uid(bookid1)
+    book2 = library.get_book_uid(bookid2)
+    try:
+        result = book1.compare_with(book2)
+        if not 'N' == result[0]:
+            library.update_book_uid((book1.id, book2.id))
+    except (NotInitialized):
+        return 'S' #If we hit an unitialized book, work on something else until it's ready
+
 '''This thread handles comparing all the books with each other.'''
 def book_comparator(library, bookids):
-    for i, id1 in enumerate(bookids):
-        for j, id2 in enumerate(bookids):
-            if i < j:
-                book1 = library.get_book_uid(id1)
-                book2 = library.get_book_uid(id2)
-                compared = False
-                while not compared:
-                    try:
-                        result = book1.compare_with(book2)
-                        compared = True
-                        if not 'N' == result[0]:
-                            library.update_book_uid((book1.id, book2.id))
-                    except (NotInitialized):
-                        time.sleep(1)
+    Utility.compare_all_despite_starvation(bookids, len(bookids), book_compare_helper, 0, (library,))
 
 '''Takes an iterable of bookids, and does all procsesing / thread management of said processing.'''
 def process_books(library, calibre_ids, book_text_files=None, multi_thread=False):
+    bookids = []
     for id in calibre_ids:
-        if not library.get_book_cid(id):
-            library.add_book(Book.Book(calibreid=id))
+        book = library.get_book_cid(id)
+        if not book:
+            book = Book.Book(calibreid=id)
+            library.add_book(book)
+        bookids.add(book.id)
     for id in book_text_files:
-        if not library.get_book_textfile(id):
-            library.add_book(Book.Book(textfile=id))
+        book = library.get_book_textfile(id)
+        if not book:
+            book = Book.Book(textfile=id)
+            library.add_book(book)
+        bookids.add(book.id)
     
    
