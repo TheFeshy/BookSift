@@ -1,0 +1,10 @@
+.project
+.pydevproject
+/testbooks/*.txt
+
+#Categories to ignore:
+*.pyc
+*.7z
+*.rar
+*.log
+

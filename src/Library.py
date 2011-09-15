@@ -17,9 +17,11 @@ class Library():
         return self.__books_by_uuid.get(self.__uuid_by_calibre_id.get(id))
     def get_book_textfile(self, textfile): #This is used mostly for testing, so is slow
         for book in self.__books_by_uuid.values():
-            if textfile == book.matchtextfile(textfile):
+            if textfile == book.get_textfilepath():
                 return book
         return None
+    def get_book_count(self):
+        return len(self.__books_by_uuid)
     def delete_book_uid(self,id):
         book = self.get_book_uid(id)
         if book:
@@ -31,9 +33,7 @@ class Library():
                         
         else:
             pass #declare "success" - after all, the book is no longer here, right?
-    def update_book_uid(self,idlist):
-        if 1 == len(idlist):
-            idlist = (idlist,)
-        for id in idlist:
+    def update_book_uid(self,*args):
+        for id in args:
             pass #hopefully this won't be needed to ensure consistency
     

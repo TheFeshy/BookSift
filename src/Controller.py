@@ -14,7 +14,7 @@
      hypterthreaded beast though.'''
 
 
-from Exceptions import NotInitialized
+from Exceptions import NotInitialized, TBD
 import Book
 import Utility
      
@@ -39,22 +39,32 @@ def book_compare_helper(bookid1, bookid2, args, kwargs):
 
 '''This thread handles comparing all the books with each other.'''
 def book_comparator(library, bookids):
-    Utility.compare_all_despite_starvation(bookids, len(bookids), book_compare_helper, 0, (library,))
+    Utility.compare_all_despite_starvation(bookids, len(bookids), book_compare_helper, 0, library)
+    #TODO: put in "exit command" code
 
 '''Takes an iterable of bookids, and does all procsesing / thread management of said processing.'''
-def process_books(library, calibre_ids, book_text_files=None, multi_thread=False):
+def process_books(library, calibre_ids=None, book_text_files=None, multi_thread=False):
     bookids = []
-    for id in calibre_ids:
-        book = library.get_book_cid(id)
-        if not book:
-            book = Book.Book(calibreid=id)
-            library.add_book(book)
-        bookids.add(book.id)
-    for id in book_text_files:
-        book = library.get_book_textfile(id)
-        if not book:
-            book = Book.Book(textfile=id)
-            library.add_book(book)
-        bookids.add(book.id)
+    if calibre_ids:
+        for id in calibre_ids:
+            book = library.get_book_cid(id)
+            if not book:
+                book = Book.Book(calibreid=id)
+                library.add_book(book)
+            bookids.add(book.id)
+    if book_text_files:
+        for id in book_text_files:
+            book = library.get_book_textfile(id)
+            if not book:
+                book = Book.Book(textfile=id)
+                library.add_book(book)
+            bookids.append(book.id)
+    if not multi_thread:
+        #Just run through our tasks serially
+        fingerprint_initializer(library, bookids)
+        book_comparator(library, bookids)
+    else:
+        raise TBD('Multithreading is not yet implimented')
+        
     
    

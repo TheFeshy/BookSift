@@ -11,7 +11,7 @@ class Book:
        textfile is a path to the text file, if id is 0'''
     #TODO: impliment __getstate__ and __setstate__ for smaller pickling
     def __init__(self, calibreid=0, textfile=''):
-        self.id = uuid.uuid1()
+        self.id = uuid.uuid4().int
         self.__textfilepath = None
         self.calibreid = calibreid
         
@@ -29,6 +29,8 @@ class Book:
             self.__textfilepath = textfile
         else:
             TBD('Set skip status via calibre metadata')
+    def get_relationships(self):
+        return {'M':self.__matches, 'P':self.__supersetof, 'B':self.__subsetof}
     def __get_book_as_text(self):
         filename = None
         if self.__textfilepath:
@@ -45,8 +47,8 @@ class Book:
             raise CantGetText(errtxt)
     '''Converts the book to text, and reads in the necessary data.
        Will raise a CantGetText if it can't get text.'''
-    def match_textfilepath(self,textfilepath):
-        return textfilepath == self.__textfilepath
+    def get_textfilepath(self):
+        return self.__textfilepath
     def complete_scan(self,scanid):
         self.__previous_completed_scans.add(scanid)
     def __was_previously_compared(self, book):

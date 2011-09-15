@@ -16,6 +16,7 @@ from Exceptions import *
 from Book import Book
 import Library
 import Utility
+import Controller
 
 '''This class is used to make 'OCR-like' errors in text files, to make our testing more
    realistic.  It is sloppy test code; please don't use it for anything else.'''
@@ -356,12 +357,25 @@ class LibraryTestShort(unittest.TestCase):
         self.assertFalse(library.get_book_uid(book.id).statusmsg)
         book.statusmsg = True
         self.assertTrue(library.get_book_uid(book.id).statusmsg)
+
+class ControllerTestLong(unittest.TestCase):
     
+    def setUp(self):
+        self.booklist = []
+        self.booknames = SetUpTestBooks()
+        for bookname,bookpath in self.booknames.iteritems():
+            self.booklist.append(bookpath)
+    def test_basictest(self): #Just run through some books to be sure we don't crash
+        library = Library.Library()
+        Controller.process_books(library, book_text_files=self.booklist)
+        self.assertTrue(library.get_book_count() > 0) 
+        for book in self.booklist:
+            print book, library.get_book_textfile(book).get_relationships()  
 
 def runTests():
     shorttests = (FingerprintTest, BookTestShort, LibraryTestShort, UtilityTestShort)
     
-    longtests = (BookTest, UtilityTestLong)
+    longtests = (BookTest, UtilityTestLong, ControllerTestLong)
     
     shortsuite = unittest.TestSuite()
     for test in shorttests:
