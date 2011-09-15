@@ -1,8 +1,6 @@
 '''The library is the program's store of Book objects.  It takes care
    of managing them and serializing/deserializing them.'''
 
-import Book
-
 class Library():
     def __init__(self):
         self.__books_by_uuid = {}

@@ -20,10 +20,24 @@ if __name__ == '__main__':
             print 'error: {0}'.format(output)
             print 'Error staging files for Git; stopping here'
         else:
-            msg = raw_input('Enter commit message')
-            status, output = commands.getstatusoutput('git commit -m "{0}"'.format(msg))
-            print output
-            if status and not output.find('nothing to commit'):
-                print 'Error commiting to Git; stopping here'
+            status, output = commands.getstatusoutput('git diff --cached')
+            if status:
+                print 'error: {0}'.format(output)
+                print 'Error staging files for Git; stopping here'
             else:
-                print 'Devtool completed.'
+                print output
+                choice = raw_input('Accept these changes? (y/n)')
+                if 'y' == choice.lower():
+                    msg = raw_input('Enter commit message')
+                    status, output = commands.getstatusoutput('git commit -m "{0}"'.format(msg))
+                    print output
+                    if status and not output.find('nothing to commit'):
+                        print 'Error commiting to Git; stopping here'
+                    else:
+                        choice = raw_input('Update remote repository? (y/n)')
+                        if 'y' == choice.lower():
+                            status, output = commands.getstatusoutput('git push -u origin master')
+                            print output
+                            if status and not output.find('nothing to commit'):
+                                    print 'Error commiting to Github'
+                        print 'Devtool completed.'
