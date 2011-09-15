@@ -1,6 +1,5 @@
 .project
 .pydevproject
-/testbooks/*.txt
 
 #Categories to ignore:
 *.pyc
