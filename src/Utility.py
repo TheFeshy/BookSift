@@ -61,38 +61,3 @@ def compare_all_despite_starvation(all, allsize, function, sleep, *args, **kwarg
                     time.sleep(sleep)
                 any_unfinished = False
                 i = 0
-
-def slowarray(array, l):
-    for i,c in enumerate(array[0]):
-        with l:
-            array[0][i] = i
-        time.sleep(.01)
-            
-def testfunc(n1, n2, result, bogus):
-    retval = 'C'
-    lock = result[0][1]
-    with lock:
-        if n1 < 0 or n2 < 0:
-            retval = 'S'
-        else:
-            result[0][0][0] = result[0][0][0] + n1 + n2
-    return retval
-
-if __name__ == '__main__':
-    testarray = [x for x in range(100)]
-    total = 0 #We will test that all pairs are summed by getting the total of all pair additions
-    paircount = 0
-    for i, n1 in enumerate(testarray):
-        for j, n2 in enumerate(testarray):
-            if i < j:
-                paircount = paircount +1
-                total = total + n1 + n2
-    print total
-    testarray2 = [-1 for unused in range(100)]
-    l = threading.Lock()
-    t = threading.Thread(target=slowarray, args=((testarray2,),l))
-    t.start()
-    result = [0,]
-    compare_all_despite_starvation(testarray2, len(testarray2), testfunc, 0.01, (result,l))
-    print result.pop()
-    
