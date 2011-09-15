@@ -16,13 +16,13 @@ class Book:
         self.calibreid = calibreid
         
         self.__fingerprint = None
-        self.donecomparing = False
         
         self.__matches = set()
         self.__supersetof = set()
         self.__subsetof = set()
         
         self.__skip = False #True if we should skip this book due to error or user request
+        self.__previous_completed_scans = set()
         self.statusmsg = 'Not examined'
         #if we are using this without calibre, or in test mode, use the text file parameter
         if not calibreid:
@@ -45,6 +45,15 @@ class Book:
             raise CantGetText(errtxt)
     '''Converts the book to text, and reads in the necessary data.
        Will raise a CantGetText if it can't get text.'''
+    def match_textfilepath(self,textfilepath):
+        return textfilepath == self.__textfilepath
+    def complete_scan(self,scanid):
+        self.__previous_completed_scans.add(scanid)
+    def __was_previously_compared(self, book):
+        for scanid in self.__previous_completed_scans:
+            if scanid in book.__previous_completed_scans:
+                return True
+        return False
     def initialize_text_data(self, hash_function=hash):
         if not self.__skip:
             if not self.__fingerprint:
@@ -70,14 +79,14 @@ class Book:
             return None
     def compare_with(self,book2):
         if self.__skip or book2.__skip:
-            return 'N',2 #Books we ignore are effectively no match
+            return ('N',2) #Books we ignore are effectively no match
         elif self.id == book2.id:
             return ('M',2) #technically, comparing a book with itself is a match...but don't add it to relationships; mathematicians asside "identity proofs" are not useful.
         preexisting = self.__get_existing_relationship(book2)
         if preexisting:
             return preexisting
-        elif self.donecomparing and book2.donecomparing:
-            return ('N',2) #If both books are "done" they have already been compared.  If they had a relationship we would have found it already.
+        elif self.__was_previously_compared(book2):
+            return ('N',2)
         if not self.__fingerprint and not book2.__fingerprint:
             raise NotInitialized('Attempted to compare books that have not been fingerprinted, or that do not have comparable fingerprints')
         result = self.__fingerprint.compare_with(book2.__fingerprint)

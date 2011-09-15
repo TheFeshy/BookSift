@@ -8,11 +8,14 @@ from zipfile import ZipFile
 import os.path
 import time
 import pickle
+import tempfile
+import threading
 
 from Fingerprint import Fingerprint
 from Exceptions import *
 from Book import Book
-import tempfile
+import Library
+import Utility
 
 '''This class is used to make 'OCR-like' errors in text files, to make our testing more
    realistic.  It is sloppy test code; please don't use it for anything else.'''
@@ -195,6 +198,7 @@ class BookTestShort(unittest.TestCase):
         self.assertRaises(NotInitialized, book1.compare_with, book2)
         
 class BookTest(unittest.TestCase):
+    
     def setUp(self):
         self.books = {}
         self.booknames = SetUpTestBooks()
@@ -219,13 +223,13 @@ class BookTest(unittest.TestCase):
         curtime = time.time()
         self.books['book0o'].compare_with(self.books['book1e'])
         runtime = time.time() - curtime
-        self.assertTrue(runtime < 1.0)
+        self.assertTrue(runtime < 0.3)
     def test_quickrematch(self):#Verify that books that have already been checked are checked quickly
         self.books['book0o'].compare_with(self.books['book1e'])
         curtime = time.time()
         self.books['book0o'].compare_with(self.books['book1e'])
         runtime = time.time() - curtime
-        self.assertTrue(runtime < 1.0)
+        self.assertTrue(runtime < 0.3)
     def test_matchpickledbook(self): #Verify that books work normally after being pickled
         tmp = tempfile.TemporaryFile()
         pickle.dump(self.books['book0o'],tmp,-1)
@@ -244,12 +248,120 @@ class BookTest(unittest.TestCase):
         pbook1 = pickle.load(tmp)
         result = pbook0.compare_with(pbook1)
         self.assertEqual(result[0],'N')
+    def test_previouslycomparedbooksarenotrecompared(self):
+        self.books['book0o'].complete_scan(42)
+        self.books['book0e'].complete_scan(42)
+        curtime = time.time()
+        result = self.books['book0o'].compare_with(self.books['book0e'])
+        runtime = time.time() - curtime
+        self.assertEqual(result[0],'N') #Even though these match, this should return 'N' because we have declared that they have already been compared on a previous run
+        self.assertTrue(runtime < 0.1) #Additionally; verify that this "already checked" result happens quickly!
+
+def slowarray(array, l, sleep):
+    for i,c in enumerate(array[0]):
+        with l:
+            array[0][i] = i
+        time.sleep(sleep)
+            
+def testfunc(n1, n2, result, bogus):
+    retval = 'C'
+    lock = result[0][1]
+    with lock:
+        if n1 < 0 or n2 < 0:
+            retval = 'S'
+        else:
+            result[0][0][0] = result[0][0][0] + n1 + n2
+    return retval
+        
+class UtilityTestShort(unittest.TestCase):
+    def test_starved_compare_quick(self): #Verify that the "compare_all_despite_starvation" method works identical to a simple double loop
+        testarray = [x for x in range(12)]
+        total = 0 #We will test that all pairs are summed by getting the total of all pair additions
+        paircount = 0
+        for i, n1 in enumerate(testarray):
+            for j, n2 in enumerate(testarray):
+                if i < j:
+                    paircount = paircount +1
+                    total = total + n1 + n2
+        testarray2 = [-1 for unused in range(12)]
+        l = threading.Lock()
+        t = threading.Thread(target=slowarray, args=((testarray2,),l,0))
+        t.start()
+        result = [0,]
+        Utility.compare_all_despite_starvation(testarray2, len(testarray2), testfunc, 0, (result,l))
+        self.assertEqual(total, result.pop())
         
 
-def runTests():
-    shorttests = (FingerprintTest, BookTestShort)
+class UtilityTestLong(unittest.TestCase):
+    def test_slowlygeneratedarray(self): #Verify that the "compare_all_despite_starvation" works even when being forced to wait
+        testarray = [x for x in range(50)]
+        total = 0 #We will test that all pairs are summed by getting the total of all pair additions
+        paircount = 0
+        for i, n1 in enumerate(testarray):
+            for j, n2 in enumerate(testarray):
+                if i < j:
+                    paircount = paircount +1
+                    total = total + n1 + n2
+        testarray2 = [-1 for unused in range(50)]
+        l = threading.Lock()
+        t = threading.Thread(target=slowarray, args=((testarray2,),l,0.08))
+        t.start()
+        result = [0,]
+        Utility.compare_all_despite_starvation(testarray2, len(testarray2), testfunc, 0.02, (result,l))
+        self.assertEqual(total, result.pop())
+        
+class LibraryTestShort(unittest.TestCase):
+    def test_storeretrievebookbyuuid(self): #Verify the library can add and get books
+        book = Book(textfile='invalidfile.txt')
+        library = Library.Library()
+        library.add_book(book)
+        testvalue = False
+        if library.get_book_uid(book.id):
+            testvalue = True
+        self.assertTrue(testvalue)
+    def test_storeretrievebookbycalibreid(self): #Verify the library can add and get books by calibre id
+        book = Book(calibreid=100)
+        library = Library.Library()
+        library.add_book(book)
+        testvalue = False
+        if library.get_book_cid(book.calibreid):
+            testvalue = True
+        self.assertTrue(testvalue)
+    def test_failstofindnonexistantbookbyid(self):#Verfy we aren't finding ghost books
+        book = Book(calibreid=100)
+        library = Library.Library()
+        library.add_book(book)
+        testvalue = False
+        if library.get_book_cid(101):
+            testvalue = True
+        self.assertFalse(testvalue)
+    def test_deletingbook(self): #make sure delete actually removes books from the library
+        book = Book(textfile='invalidfile.txt')
+        library = Library.Library()
+        library.add_book(book)
+        testvalue = False
+        if library.get_book_uid(book.id):
+            testvalue = True
+        self.assertTrue(testvalue)
+        library.delete_book_uid(book.id)
+        testvalue = False
+        if library.get_book_uid(book.id):
+            testvalue = True
+        self.assertFalse(testvalue)
+    def test_updatbook(self): #make certain that the library updates books properly
+        book = Book(textfile='invalidfile.txt')
+        library = Library.Library()
+        book.statusmsg = False
+        library.add_book(book)
+        self.assertFalse(library.get_book_uid(book.id).statusmsg)
+        book.statusmsg = True
+        self.assertTrue(library.get_book_uid(book.id).statusmsg)
     
-    longtests = (BookTest,)
+
+def runTests():
+    shorttests = (FingerprintTest, BookTestShort, LibraryTestShort, UtilityTestShort)
+    
+    longtests = (BookTest, UtilityTestLong)
     
     shortsuite = unittest.TestSuite()
     for test in shorttests:
