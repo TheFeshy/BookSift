@@ -65,6 +65,7 @@ def process_books(library, calibre_ids=None, book_text_files=None, multi_thread=
         book_comparator(library, bookids)
     else:
         raise TBD('Multithreading is not yet implimented')
+    #TODO: must add the completed scan uuid to books when finished
         
     
    

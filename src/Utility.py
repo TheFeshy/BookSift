@@ -1,6 +1,5 @@
 
 from array import array
-import threading
 import time
 
 '''This function calculates the Damerau-Levenshtein distance between sequences.'''
@@ -52,7 +51,7 @@ def compare_all_despite_starvation(all, allsize, function, sleep, *args, **kwarg
             break #Python needs either a do-while loop, or a multilevel break to avoid this second comparison
         else:
             progress[i] = allsize+1
-        i = i + 1
+        i += 1
         if i > (allsize-1):
             if not any_unfinished:
                 break
@@ -61,3 +60,4 @@ def compare_all_despite_starvation(all, allsize, function, sleep, *args, **kwarg
                     time.sleep(sleep)
                 any_unfinished = False
                 i = 0
+

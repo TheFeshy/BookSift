@@ -358,6 +358,67 @@ class LibraryTestShort(unittest.TestCase):
         book.statusmsg = True
         self.assertTrue(library.get_book_uid(book.id).statusmsg)
 
+def appendtofilename(filename, append):
+    newname, ext = os.path.splitext(filename)
+    newname = newname+ append + ext
+    return newname
+    
+def SetUpTimedTestBooks():
+    archive = ZipFile(os.path.join(testbookdir,'samplebooks.zip'))
+    bookarchive = archive.namelist()
+    booknames = []
+    for book in bookarchive:
+        newname, ext = os.path.splitext(book)
+        newname = os.path.join(testbookdir, newname +ext)
+        with open(newname, 'w') as of:
+            mybook = archive.open(book)
+            of.write(mybook.read())
+        booknames.append(newname)
+    if len(bookarchive):
+        e = ErrorMaker()
+        random.seed(42) #make sure tests are consistent across runs!
+        for i in random.sample(booknames,5): #Pick some to make duplicates of
+            dupe = appendtofilename(i, 'd')
+            with open(i,'r') as b1:
+                with open(dupe, 'w') as b2:
+                    b2.write(b1.read())
+            booknames.append(dupe)
+        for i in random.sample(booknames,5): #Pick some more (maybe double dupe) to make duplicates of
+            dupe = appendtofilename(i, 'd')
+            with open(i,'r') as b1:
+                with open(dupe, 'w') as b2:
+                    b2.write(b1.read())
+            booknames.append(dupe)
+        for i in random.sample(booknames, 18): #Muss up some of the books
+            efile = appendtofilename(i, 'e')
+            with open(i, 'r') as b1:
+                with open(efile, 'w') as b2:
+                    text = b1.read()
+                    pagejunk = "Somereptitiousgarbabe/likean/http/orsomethng"
+                    if random.randint(0,6):
+                        pagejunk = False
+                    text = e.IntroduceErrors(text, random.randint(600,4000), e.RelativeErrors(24,6,12,2,1,1), pagejunk)
+                    b2.write(text)
+            booknames.append(efile)
+        for i in xrange(4): #Build some anthologies
+            text = ""
+            for j in random.sample(booknames, random.randint(2,6)):
+                print j
+                with open(j, 'r') as book:
+                    more = book.read()
+                    text += more
+                    antname = os.path.join(testbookdir, 'Anthology{0}.txt'.format(i))
+            with open(os.path.join(testbookdir, antname), 'w') as ant:
+                ant.write(text)
+            booknames.append(antname)
+    return booknames
+
+def CleanUpTimedTestBooks():
+    allfiles = os.listdir(testbookdir)
+    for file in allfiles:
+        if '.txt' == os.path.splitext(file)[1].lower():
+            os.remove(os.path.join(testbookdir, file))
+
 class ControllerTestLong(unittest.TestCase):
     
     def setUp(self):
@@ -371,11 +432,22 @@ class ControllerTestLong(unittest.TestCase):
         self.assertTrue(library.get_book_count() > 0) 
         for book in self.booklist:
             print book, library.get_book_textfile(book).get_relationships()  
+            
+class ControllerTestingTimed(unittest.TestCase):
+    def setUp(self):
+        SetUpTimedTestBooks()
+    def tearDown(self):
+        CleanUpTimedTestBooks()
+        pass
+    def test_SortCollection(self):
+        self.assertTrue(True)
 
-def runTests():
+def runTests(timed = False):
     shorttests = (FingerprintTest, BookTestShort, LibraryTestShort, UtilityTestShort)
     
     longtests = (BookTest, UtilityTestLong, ControllerTestLong)
+    
+    timedtests = (ControllerTestingTimed,)
     
     shortsuite = unittest.TestSuite()
     for test in shorttests:
@@ -385,17 +457,27 @@ def runTests():
     if testresults.failures or testresults.errors:
         print 'Did not pass quick check; skipping longer checks'
         return False
-    longsuite = unittest.TestSuite()
-    for test in longtests:
-        longsuite.addTest(unittest.makeSuite(test, 'test'))
-    testresults = runner.run(longsuite)
-    if testresults.failures or testresults.errors:
-        return False
-    return True
+    if not timed:
+        longsuite = unittest.TestSuite()
+        for test in longtests:
+            longsuite.addTest(unittest.makeSuite(test, 'test'))
+        testresults = runner.run(longsuite)
+        if testresults.failures or testresults.errors:
+            return False
+        return True
+    else:
+        timedsuite = unittest.TestSuite()
+        for test in timedtests:
+            timedsuite.addTest(unittest.makeSuite(test, 'test'))
+        testresults = runner.run(timedsuite)
+        if testresults.failures or testresults.errors:
+            return False
+        return True
+        
 
 if __name__ == '__main__':
     
-    runTests()
+    runTests(True)
     
     
         

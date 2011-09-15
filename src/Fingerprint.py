@@ -103,8 +103,8 @@ class Fingerprint:
         for c1 in shortseq:
             c2 = longset.get(c1)
             if c2 == nextexpected:
-                currentscore = currentscore + 1
-                nextexpected = nextexpected + 1
+                currentscore += 1
+                nextexpected += 1
             else:
                 if currentscore > meaningful_length: #We no longer match, but remember how much we have matched so far
                     totalscore = totalscore + currentscore
