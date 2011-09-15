@@ -38,13 +38,19 @@ class Fingerprint:
        'M' if this book is a Match of the second book
        exceptions:
        Can throw DifferentHashes if the fingerprints were hashed using incompatible hashes.'''
-    def compare_with(self,fp2,quick_threshold=.75,long_threshold=.6):
+    def compare_with(self,fp2,quick_threshold=.7,long_threshold=.6, anthology_threshold=.1):
         if not self.hashcheck == fp2.hashcheck:
             raise DifferentHashes('Attempted to compare two fingerprints that have been created using different hashes')
         score = Fingerprint.__lcs_custom(self.__importantwords, self.__importantset, fp2.__importantwords, fp2.__importantset, quick_threshold)
-        if long_threshold < score:
+        size_ratio = min(self.__booklength,fp2.__booklength)/max(self.__booklength, fp2.__booklength)
+        anthology = False
+        minscore = long_threshold
+        if size_ratio < .85:
+            anthology = True
+            minscore = anthology_threshold
+        if minscore < score:
             #We have a book that matches, let's see what the relationship is:
-            if min(self.__booklength,fp2.__booklength)/max(self.__booklength, fp2.__booklength) > long_threshold:
+            if not anthology:
                 return 'M', score
             elif self.__booklength > fp2.__booklength:
                 return 'P',score
@@ -83,7 +89,7 @@ class Fingerprint:
        match
        quick_threshold is the percentage of words that must be present in both sets'''
     @staticmethod
-    def __lcs_custom(seq1 ,set1, seq2, set2, quick_threshold = 0.7, meaningful_length = 3):
+    def __lcs_custom(seq1 ,set1, seq2, set2, quick_threshold, meaningful_length = 3):
         #Compare the shortest sequence to the longest hash for efficiency 
         if len(seq1) < len(seq2):
             shortseq = seq1
@@ -97,7 +103,7 @@ class Fingerprint:
         if len(dict.fromkeys(x for x in set1 if x in set2))/len(shortseq) < quick_threshold:
             return 0 #If we don't meet the minimum number of character matches, drop out early
         totalscore = 0
-        bestpossible = min (len(shortseq),len(longset))
+        bestpossible = len(shortseq)
         nextexpected = 0 #The index of the next character, if the sequences match
         currentscore = 0
         for c1 in shortseq:

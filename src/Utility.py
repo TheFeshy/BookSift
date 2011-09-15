@@ -34,6 +34,7 @@ def compare_all_despite_starvation(all, allsize, function, sleep, *args, **kwarg
     i = 0
     status = 'C'
     any_unfinished = False
+    compares = 0;
     while True:
         uninterrupted = True
         j = max(progress[i], i+1)
@@ -44,6 +45,8 @@ def compare_all_despite_starvation(all, allsize, function, sleep, *args, **kwarg
             elif status == 'S':
                 uninterrupted = False
                 any_unfinished = True
+            else:
+                compares += 1
             j = j + 1
         if status == 'S':
             progress[i] =  j - 1
@@ -60,4 +63,5 @@ def compare_all_despite_starvation(all, allsize, function, sleep, *args, **kwarg
                     time.sleep(sleep)
                 any_unfinished = False
                 i = 0
+    print compares
 

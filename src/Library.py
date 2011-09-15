@@ -34,4 +34,54 @@ class Library():
     def update_book_uid(self,*args):
         for id in args:
             pass #hopefully this won't be needed to ensure consistency
+    def print_pretty_tree(self):
+        class Node():
+            def __init__(self):
+                self.books=[]
+                self.children=[]
+                self.parents=[]
+            def __str__(self):
+                text  = "-----------------------------------------------------------------\n"
+                text += "Matches:\n"
+                text += self.books.__str__()
+                text += "\nChilren:\n"
+                text += self.children.__str__()
+                text += "\nParents:\n"
+                text += self.parents.__str__()
+                text += "\n-----------------------------------------------------------------\n"
+                return text
+        nodelist = []
+        unmatched = []
+        done = set()
+        print 'number of books', len(self.__books_by_uuid.values())
+        for book in self.__books_by_uuid.values():
+            if book in done:
+                pass
+            else:
+                relate = book.get_relationships()
+                if not len(relate['M']) and not len(relate['P']) and not len(relate['B']):
+                    unmatched.append(book.get_textfilepath())
+                else:
+                    node = Node()
+                    node.books.append(book.get_textfilepath())
+                    for uid in relate['M']:
+                        mbook = self.get_book_uid(uid)
+                        node.books.append(mbook.get_textfilepath())
+                        done.add(mbook)
+                    for uid in relate['P']:
+                        mbook = self.get_book_uid(uid)
+                        node.children.append(mbook.get_textfilepath())
+                    for uid in relate['B']:
+                        mbook = self.get_book_uid(uid)
+                        node.parents.append(mbook.get_textfilepath())
+                    nodelist.append(node)
+        text = ""
+        for i in nodelist:
+            text += i.__str__()
+        text += 'Unmatched Files:\n'
+        for i in unmatched:
+            text+= i.__str__()
+        return text
+            
+            
     

@@ -72,11 +72,11 @@ class Book:
             raise NotInitialized('Attempted to compare books that have not been fingerprinted, or that do not have comparable fingerprints')
     def __get_existing_relationship(self, book2):
         if book2.id in self.__matches:
-            return 'M'
+            return 'M',2
         elif book2.id in self.__subsetof:
-            return 'B'
+            return 'B',2
         elif book2.id in self.__supersetof:
-            return 'P'
+            return 'P',2
         else:
             return None
     def compare_with(self,book2):

@@ -403,7 +403,6 @@ def SetUpTimedTestBooks():
         for i in xrange(4): #Build some anthologies
             text = ""
             for j in random.sample(booknames, random.randint(2,6)):
-                print j
                 with open(j, 'r') as book:
                     more = book.read()
                     text += more
@@ -429,18 +428,31 @@ class ControllerTestLong(unittest.TestCase):
     def test_basictest(self): #Just run through some books to be sure we don't crash
         library = Library.Library()
         Controller.process_books(library, book_text_files=self.booklist)
-        self.assertTrue(library.get_book_count() > 0) 
-        for book in self.booklist:
-            print book, library.get_book_textfile(book).get_relationships()  
+        self.assertTrue(library.get_book_count() > 0)  
+
+def countcompares(num):
+    total = 0
+    for i in xrange(num):
+        total += i
+    return total
             
 class ControllerTestingTimed(unittest.TestCase):
     def setUp(self):
-        SetUpTimedTestBooks()
+        print 'begin big setup (may take a few seconds)'
+        self.booknames = SetUpTimedTestBooks()
     def tearDown(self):
-        CleanUpTimedTestBooks()
+        #CleanUpTimedTestBooks()
         pass
     def test_SortCollection(self):
-        self.assertTrue(True)
+        print 'Beginning book processing'
+        start = time.time()
+        library = Library.Library()
+        Controller.process_books(library, book_text_files=self.booknames)
+        end = time.time()
+        compares = countcompares(len(self.booknames))
+        print library.print_pretty_tree()
+        print 'Processed {0} comparisons in {1} seconds.'.format(compares, end - start)
+        self.assertTrue(library.get_book_count() > 0) 
 
 def runTests(timed = False):
     shorttests = (FingerprintTest, BookTestShort, LibraryTestShort, UtilityTestShort)
