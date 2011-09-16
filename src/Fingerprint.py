@@ -24,6 +24,10 @@ class Fingerprint:
             self.__importantset[c] = i
         self.__booklength = len(book)
         self.hashcheck = hash_function('magicvalue')
+    
+    '''This function has the look of one pulled out of thin air... it pretty much was. '''  
+    def __get_minscore_from_ratio(self, ratio):
+        return  min(.7,max(-.4/ratio +.85,.15))
     '''Determines the relationship with another Fingerprint, using optional thresholds
        parameters:
        method determins the method used.  the default is 'dl' for a Damerau-Levenshtein comparison
@@ -38,16 +42,15 @@ class Fingerprint:
        'M' if this book is a Match of the second book
        exceptions:
        Can throw DifferentHashes if the fingerprints were hashed using incompatible hashes.'''
-    def compare_with(self,fp2,quick_threshold=.7,long_threshold=.6, anthology_threshold=.1):
+    def compare_with(self,fp2):
         if not self.hashcheck == fp2.hashcheck:
             raise DifferentHashes('Attempted to compare two fingerprints that have been created using different hashes')
-        score = Fingerprint.__lcs_custom(self.__importantwords, self.__importantset, fp2.__importantwords, fp2.__importantset, quick_threshold)
         size_ratio = min(self.__booklength,fp2.__booklength)/max(self.__booklength, fp2.__booklength)
         anthology = False
-        minscore = long_threshold
-        if size_ratio < .85:
+        minscore = self.__get_minscore_from_ratio(size_ratio)
+        score = Fingerprint.__lcs_custom(self.__importantwords, self.__importantset, fp2.__importantwords, fp2.__importantset, minscore)
+        if size_ratio < .8:
             anthology = True
-            minscore = anthology_threshold
         if minscore < score:
             #We have a book that matches, let's see what the relationship is:
             if not anthology:
@@ -100,18 +103,22 @@ class Fingerprint:
         #TODO: We might replace this "quick check" with a counter in the longer check that causes 
             #early exit if the sequence checked so far, minus the total score, exceeds the allowed 
             #threshold.  Test possible speedups with real world data.
-        if len(dict.fromkeys(x for x in set1 if x in set2))/len(shortseq) < quick_threshold:
-            return 0 #If we don't meet the minimum number of character matches, drop out early
+        #if len(dict.fromkeys(x for x in set1 if x in set2))/len(shortseq) < quick_threshold:
+        #    return 0 #If we don't meet the minimum number of character matches, drop out early
         totalscore = 0
         bestpossible = len(shortseq)
         nextexpected = 0 #The index of the next character, if the sequences match
         currentscore = 0
+        miss = int(len(seq1) *(1-quick_threshold))
         for c1 in shortseq:
             c2 = longset.get(c1)
             if c2 == nextexpected:
                 currentscore += 1
                 nextexpected += 1
             else:
+                miss -= 1
+                if not miss:
+                    return 0
                 if currentscore > meaningful_length: #We no longer match, but remember how much we have matched so far
                     totalscore = totalscore + currentscore
                 if c2: #If we at least found a character somewhere in the next sequence, start matching from there

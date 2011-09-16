@@ -33,7 +33,6 @@ def book_compare_helper(bookid1, bookid2, args, kwargs):
     try:
         result = book1.compare_with(book2)
         if not 'N' == result[0]:
-            print book1.get_textfilepath(), book2.get_textfilepath(), result
             library.update_book_uid((book1.id, book2.id))
     except (NotInitialized):
         return 'S' #If we hit an unitialized book, work on something else until it's ready

@@ -26,6 +26,12 @@ if __name__ == '__main__':
                 print 'Error staging files for Git; stopping here'
             else:
                 print output
+                print '===Changed and Added files:=============================='
+                lines = output.split('\n')
+                for line in lines:
+                    if line.find('+++ b') > -1:
+                        print line
+                print '========================================================='
                 choice = raw_input('Accept these changes? (y/n)')
                 if 'y' == choice.lower():
                     msg = raw_input('Enter commit message')

@@ -63,5 +63,4 @@ def compare_all_despite_starvation(all, allsize, function, sleep, *args, **kwarg
                     time.sleep(sleep)
                 any_unfinished = False
                 i = 0
-    print compares
 

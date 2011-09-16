@@ -53,7 +53,6 @@ class Library():
         nodelist = []
         unmatched = []
         done = set()
-        print 'number of books', len(self.__books_by_uuid.values())
         for book in self.__books_by_uuid.values():
             if book in done:
                 pass

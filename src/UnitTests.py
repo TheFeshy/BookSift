@@ -362,55 +362,6 @@ def appendtofilename(filename, append):
     newname, ext = os.path.splitext(filename)
     newname = newname+ append + ext
     return newname
-    
-def SetUpTimedTestBooks():
-    archive = ZipFile(os.path.join(testbookdir,'samplebooks.zip'))
-    bookarchive = archive.namelist()
-    booknames = []
-    for book in bookarchive:
-        newname, ext = os.path.splitext(book)
-        newname = os.path.join(testbookdir, newname +ext)
-        with open(newname, 'w') as of:
-            mybook = archive.open(book)
-            of.write(mybook.read())
-        booknames.append(newname)
-    if len(bookarchive):
-        e = ErrorMaker()
-        random.seed(42) #make sure tests are consistent across runs!
-        for i in random.sample(booknames,5): #Pick some to make duplicates of
-            dupe = appendtofilename(i, 'd')
-            with open(i,'r') as b1:
-                with open(dupe, 'w') as b2:
-                    b2.write(b1.read())
-            booknames.append(dupe)
-        for i in random.sample(booknames,5): #Pick some more (maybe double dupe) to make duplicates of
-            dupe = appendtofilename(i, 'd')
-            with open(i,'r') as b1:
-                with open(dupe, 'w') as b2:
-                    b2.write(b1.read())
-            booknames.append(dupe)
-        for i in random.sample(booknames, 18): #Muss up some of the books
-            efile = appendtofilename(i, 'e')
-            with open(i, 'r') as b1:
-                with open(efile, 'w') as b2:
-                    text = b1.read()
-                    pagejunk = "Somereptitiousgarbabe/likean/http/orsomethng"
-                    if random.randint(0,6):
-                        pagejunk = False
-                    text = e.IntroduceErrors(text, random.randint(600,4000), e.RelativeErrors(24,6,12,2,1,1), pagejunk)
-                    b2.write(text)
-            booknames.append(efile)
-        for i in xrange(4): #Build some anthologies
-            text = ""
-            for j in random.sample(booknames, random.randint(2,6)):
-                with open(j, 'r') as book:
-                    more = book.read()
-                    text += more
-                    antname = os.path.join(testbookdir, 'Anthology{0}.txt'.format(i))
-            with open(os.path.join(testbookdir, antname), 'w') as ant:
-                ant.write(text)
-            booknames.append(antname)
-    return booknames
 
 def CleanUpTimedTestBooks():
     allfiles = os.listdir(testbookdir)
@@ -419,7 +370,6 @@ def CleanUpTimedTestBooks():
             os.remove(os.path.join(testbookdir, file))
 
 class ControllerTestLong(unittest.TestCase):
-    
     def setUp(self):
         self.booklist = []
         self.booknames = SetUpTestBooks()
@@ -436,13 +386,107 @@ def countcompares(num):
         total += i
     return total
             
-class ControllerTestingTimed(unittest.TestCase):
+class CompleteRunthroughTest(unittest.TestCase):
+    def SetUpTimedTestBooks(self):
+        archive = ZipFile(os.path.join(testbookdir,'samplebooks.zip'))
+        bookarchive = archive.namelist()
+        self.booknames = []
+        self.anthology=[]
+        self.duplicates=[]
+        self.totalpandc = 0 #since this is a symetric relationship, parents and children are equal in number
+        for book in bookarchive:
+            newname, ext = os.path.splitext(book)
+            newname = os.path.join(testbookdir, newname +ext)
+            with open(newname, 'w') as of:
+                mybook = archive.open(book)
+                of.write(mybook.read())
+            self.booknames.append(newname)
+        if len(bookarchive):
+            e = ErrorMaker()
+            random.seed(42) #make sure tests are consistent across runs!
+            for i in xrange(4): #Build some anthologies *before* we duplicate... we search on unique words!
+                antname = os.path.join(testbookdir, 'Anthology{0}.txt'.format(i))
+                antlist = [antname]
+                text = ""
+                for j in random.sample(self.booknames, random.randint(2,6)):
+                    antlist.append(j)
+                    with open(j, 'r') as book:
+                        more = book.read()
+                        text += more
+                self.totalpandc += len(antlist) - 1
+                with open(os.path.join(testbookdir, antname), 'w') as ant:
+                    ant.write(text)
+                self.booknames.append(antname)
+                self.anthology.append(antlist)
+            for i in random.sample(self.booknames,9): #Pick some to make duplicates of
+                if i.find('Anthology') > -1:
+                    break
+                dupe = appendtofilename(i, 'd')
+                with open(i,'r') as b1:
+                    with open(dupe, 'w') as b2:
+                        b2.write(b1.read())
+                self.booknames.append(dupe)
+                self.duplicates.append((i,dupe))
+            for i in random.sample(self.booknames,9): #Pick some more (maybe double dupe) to make duplicates of
+                if i.find('Anthology') > -1:
+                    break
+                dupe = appendtofilename(i, 'd')
+                with open(i,'r') as b1:
+                    with open(dupe, 'w') as b2:
+                        b2.write(b1.read())
+                self.booknames.append(dupe)
+                self.duplicates.append((i,dupe))
+            for i in random.sample(self.booknames, 18): #Muss up some of the books
+                if i.find('Anthology') > -1:
+                    break
+                efile = appendtofilename(i, 'e')
+                with open(i, 'r') as b1:
+                    with open(efile, 'w') as b2:
+                        text = b1.read()
+                        pagejunk = "Somereptitiousgarbabe/likean/http/orsomethng"
+                        if random.randint(0,6):
+                            pagejunk = False
+                        text = e.IntroduceErrors(text, random.randint(600,4000), e.RelativeErrors(24,6,12,2,1,1), pagejunk)
+                        b2.write(text)
+                self.booknames.append(efile)
+                self.duplicates.append((i,efile))
+        return self.booknames
     def setUp(self):
         print 'begin big setup (may take a few seconds)'
-        self.booknames = SetUpTimedTestBooks()
+        self.booknames = self.SetUpTimedTestBooks()
     def tearDown(self):
-        #CleanUpTimedTestBooks()
+        CleanUpTimedTestBooks()
         pass
+    def verify_matches(self, library):
+        anthologyhits = 0
+        anthologymax = 0
+        dupehits = 0
+        dupemax = len(self.duplicates)
+        for ant in self.anthology:
+            antname = ant[0]
+            anthologymax += len(ant[1:])
+            children = library.get_book_textfile(antname).get_relationships()['P']
+            for child in ant[1:]:
+                for childid in children:
+                    name = library.get_book_uid(childid).get_textfilepath()
+                    if name.find(child[:-4]) > -1:
+                        anthologyhits += 1
+                        break
+        for original, dupe in self.duplicates:
+            obook = library.get_book_textfile(original)
+            matchids = obook.get_relationships()['M']
+            for id in matchids:
+                filename = library.get_book_uid(id).get_textfilepath()
+                if dupe.find(filename[:-4]) > -1:
+                    dupehits += 1
+                    break
+        #now check false positives:
+        parenthits = 0
+        for name in self.booknames:
+            parents = library.get_book_textfile(name).get_relationships()['P']
+            parenthits += len(parents)
+        return (anthologymax, anthologyhits, dupemax, dupehits, self.totalpandc, parenthits)
+                
     def test_SortCollection(self):
         print 'Beginning book processing'
         start = time.time()
@@ -452,14 +496,16 @@ class ControllerTestingTimed(unittest.TestCase):
         compares = countcompares(len(self.booknames))
         print library.print_pretty_tree()
         print 'Processed {0} comparisons in {1} seconds.'.format(compares, end - start)
-        self.assertTrue(library.get_book_count() > 0) 
+        self.assertTrue(library.get_book_count() > 0)
+        results =  self.verify_matches(library)
+        print 'Anthology children found: ({1}/{0})\nDuplicates found: ({3}/{2})\nParents found: ({5}/{4})'.format(*results)
 
 def runTests(timed = False):
     shorttests = (FingerprintTest, BookTestShort, LibraryTestShort, UtilityTestShort)
     
     longtests = (BookTest, UtilityTestLong, ControllerTestLong)
     
-    timedtests = (ControllerTestingTimed,)
+    timedtests = (CompleteRunthroughTest,)
     
     shortsuite = unittest.TestSuite()
     for test in shorttests:
