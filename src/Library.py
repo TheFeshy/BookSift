@@ -20,6 +20,11 @@ class Library():
         return None
     def get_book_count(self):
         return len(self.__books_by_uuid)
+    def book_iter(self):
+        #This can probably be invalidated if books are added during use; only use it after
+        #all books are added to the library
+        for book in self.__books_by_uuid.itervalues():
+            yield book
     def delete_book_uid(self,id):
         book = self.get_book_uid(id)
         if book:
@@ -63,14 +68,14 @@ class Library():
                 else:
                     node = Node()
                     node.books.append(book.get_textfilepath())
-                    for uid in relate['M']:
+                    for uid in relate['M'].iterkeys():
                         mbook = self.get_book_uid(uid)
                         node.books.append(mbook.get_textfilepath())
                         done.add(mbook)
-                    for uid in relate['P']:
+                    for uid in relate['P'].iterkeys():
                         mbook = self.get_book_uid(uid)
                         node.children.append(mbook.get_textfilepath())
-                    for uid in relate['B']:
+                    for uid in relate['B'].iterkeys():
                         mbook = self.get_book_uid(uid)
                         node.parents.append(mbook.get_textfilepath())
                     nodelist.append(node)

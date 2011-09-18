@@ -5,13 +5,13 @@
    absolutely no checking to make sure your build environment matches
    mine.  Use at your own risk (or better still, not at all)'''
    
-import UnitTests
+import zUnitTest
 import commands
 import os
 
 if __name__ == '__main__':
     print 'Verifying program correctness with Unit Tests'
-    if not UnitTests.runTests():
+    if not zUnitTest.runTests():
         print 'Unit Tests failed; stopping here'
     else:
         os.chdir('../')

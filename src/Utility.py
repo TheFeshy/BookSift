@@ -2,6 +2,12 @@
 from array import array
 import time
 
+def average_iterable(iter):
+    total = 0
+    for i in iter:
+        total += i
+    return total/len(iter)
+
 '''This function calculates the Damerau-Levenshtein distance between sequences.'''
 def dl_distance(seq1, seq2):
     #http://mwh.geek.nz/2009/04/26/python-damerau-levenshtein-distance/

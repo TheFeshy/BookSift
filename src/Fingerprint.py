@@ -100,11 +100,6 @@ class Fingerprint:
         else:
             shortseq = seq2
             longset = set1
-        #TODO: We might replace this "quick check" with a counter in the longer check that causes 
-            #early exit if the sequence checked so far, minus the total score, exceeds the allowed 
-            #threshold.  Test possible speedups with real world data.
-        #if len(dict.fromkeys(x for x in set1 if x in set2))/len(shortseq) < quick_threshold:
-        #    return 0 #If we don't meet the minimum number of character matches, drop out early
         totalscore = 0
         bestpossible = len(shortseq)
         nextexpected = 0 #The index of the next character, if the sequences match

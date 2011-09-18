@@ -17,9 +17,9 @@ class Book:
         
         self.__fingerprint = None
         
-        self.__matches = set()
-        self.__supersetof = set()
-        self.__subsetof = set()
+        self.__matches = {}
+        self.__supersetof = {}
+        self.__subsetof = {}
         
         self.__skip = False #True if we should skip this book due to error or user request
         self.__previous_completed_scans = set()
@@ -93,14 +93,14 @@ class Book:
             raise NotInitialized('Attempted to compare books that have not been fingerprinted, or that do not have comparable fingerprints')
         result = self.__fingerprint.compare_with(book2.__fingerprint)
         if result[0] == 'M':
-            self.__matches.add(book2.id)
-            book2.__matches.add(self.id)
+            self.__matches[book2.id]=result[1]
+            book2.__matches[self.id]=result[1]
         elif result[0] == 'P':
-            self.__supersetof.add(book2.id)
-            book2.__subsetof.add(self.id)
+            self.__supersetof[book2.id]=result[1]
+            book2.__subsetof[self.id]=result[1]
         elif result[0] == 'B':
-            self.__subsetof.add(book2.id)
-            book2.__supersetof.add(self.id)
+            self.__subsetof[book2.id]=result[1]
+            book2.__supersetof[self.id]=result[1]
         return result
 
     

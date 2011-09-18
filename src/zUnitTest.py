@@ -17,127 +17,7 @@ from Book import Book
 import Library
 import Utility
 import Controller
-
-'''This class is used to make 'OCR-like' errors in text files, to make our testing more
-   realistic.  It is sloppy test code; please don't use it for anything else.'''
-class ErrorMaker:
-    def __init__(self):
-        random.seed(42) #Because we want consistency in our testing, use a fixed random seed
-    '''Functions to introduce error into text; use IntroduceErrors to do so in a uniform way'''
-    def __SingleLetter(self, text, location):
-        counter = 0
-        for c in text[location:]:
-            if not ' ' == c:
-                text[location + counter] = random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
-                break
-            else:
-                counter = counter + 1
-        return text
-    def __SingleCharacter(self, text, location):
-        text[location] = random.choice('~`!@#$%^&*(){}:<>?[];')
-        return text
-    def __MissingSpace(self, text, location):
-        for c in text[location:]:
-            if ' ' == c:
-                text = text[:location-1] + text[location:]
-                break
-        return text
-    def __GarbageString(self, text, location):
-        length = random.randint(3,25)
-        if len(text) > location + length:
-            for i in range(length):
-                text[location + i] = random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
-        return text
-    def __MissingPage(self, text, location):
-        length = random.randint(800,1600)
-        if len(text) > location + length:
-            text = text[:location] + text[location+length:]
-        return text
-    def __RepeatPage(self, text, location): #A repeat of the previous page
-        length = random.randint(800,1600)
-        if len(text) > location + length:
-            text = text[:location+length] + text[location:]
-        return text
-    '''Functions to introduce errors in the whole book, rather than a certain location'''
-    def __InsertPerPageJunk(self,text, junk): #put some junk, like a web address, on every page
-        somejunk = array.array('c')
-        somejunk.fromstring(junk)
-        currentindex = random.randint(100,200)
-        while len(text) > currentindex:
-            if text[currentindex] == ' ':
-                text = text[:currentindex+1] + somejunk[:] + text[currentindex:]
-                currentindex = currentindex + random.randint(1000,1600) + len(somejunk)
-            else:
-                currentindex = currentindex + 1
-        return text
-        
-    
-    def RelativeErrors(self, single_letter=0, single_character=0, missing_space=0,garbage_string=0, missing_page=0,repeat_page=0):
-        return [(self.__SingleLetter,single_letter),
-                (self.__SingleCharacter,single_character),
-                (self.__MissingSpace, missing_space),
-                (self.__GarbageString, garbage_string),
-                (self.__MissingPage, missing_page),
-                (self.__RepeatPage, repeat_page)]
-        
-    '''Introduces OCR-like errors in a text.
-       text is the text to introduce errors into
-       error_rate is how often errors are introduced; approximately 1 error every error_rate bytes
-       relative_frequency is a list containing a function that introduces an error at a given location
-       and a relative rate at which this function should be called'''
-    def IntroduceErrors(self, text, error_rate, relative_frequency, pagejunk=''):
-        errors = len(text)/error_rate
-        arraytext = array.array('c')
-        arraytext.fromstring(text)
-        totalrf = 0
-        errortable = []
-        for func in relative_frequency:
-            errortable.append((func[0],totalrf,totalrf+func[1]))
-            totalrf = totalrf + func[1]
-        while errors and totalrf:
-            location = random.randint(0,len(arraytext) -1)
-            choice = random.randint(0,totalrf)
-            for er in errortable:
-                if er[1] <= choice and choice < er[2]:
-                    arraytext = er[0](arraytext, location)
-                    break;
-            errors = errors - 1
-        if pagejunk:
-            arraytext = self.__InsertPerPageJunk(arraytext, pagejunk)
-        return arraytext.tostring()
-
-testbookdir = '../testbooks/'
-        
-def SetUpTestBooks():
-    bookarchive = ZipFile(os.path.join(testbookdir,'testbooks.zip'))
-    books = {}
-    #we just need three texts to run our tests with
-    if len(bookarchive.namelist()) > 2:
-        for i,arname in enumerate(bookarchive.namelist()):
-            mybook = bookarchive.open(arname)
-            text = mybook.read()
-            originalfilename = os.path.join(testbookdir, 'book{0}original.txt'.format(i))
-            errorfilename = os.path.join(testbookdir, 'book{0}error.txt'.format(i))
-            of = open(originalfilename, 'w')
-            ef = open(errorfilename, 'w')
-            of.write(text)
-            e = ErrorMaker()
-            pagejunk = None
-            if i == 2:
-                pagejunk = 'http://website.that.is/onevery/page'
-            text = e.IntroduceErrors(text, 4000 - (i*1800), e.RelativeErrors(24,6,12,2,1,1), pagejunk)
-            ef.write(text)
-            books['book{0}o'.format(i)]= originalfilename
-            books['book{0}e'.format(i)]= errorfilename
-    else:
-        raise TBD('Not enough test books found to run test; aborting')
-    return books
-
-def CleanUpTestBooks():
-    allfiles = os.listdir(testbookdir)
-    for file in allfiles:
-        if '.txt' == os.path.splitext(file)[1].lower():
-            os.remove(os.path.join(testbookdir, file))
+import zTestDataManager
         
 '''Test cases for the Fingerprint class'''
             
@@ -197,17 +77,19 @@ class BookTestShort(unittest.TestCase):
         book1 = Book(textfile='notused.txt')
         book2 = Book(textfile='alsonotused.txt')
         self.assertRaises(NotInitialized, book1.compare_with, book2)
-        
+       
 class BookTest(unittest.TestCase):
-    
+    pass
+'''    
     def setUp(self):
         self.books = {}
-        self.booknames = SetUpTestBooks()
+        #TODO:self.booknames = SetUpTestBooks()
         for bookname,bookpath in self.booknames.iteritems():
             self.books[bookname]=Book(textfile=bookpath)
             self.books[bookname].initialize_text_data()
     def tearDown(self):
-        CleanUpTestBooks()
+        #TODO:CleanUpTestBooks()
+        pass
     def test_identicalbooks(self): #Verify we match identical books
         result = self.books['book0o'].compare_with(self.books['book0o'])
         self.assertEqual(result[0],'M')
@@ -257,7 +139,7 @@ class BookTest(unittest.TestCase):
         runtime = time.time() - curtime
         self.assertEqual(result[0],'N') #Even though these match, this should return 'N' because we have declared that they have already been compared on a previous run
         self.assertTrue(runtime < 0.1) #Additionally; verify that this "already checked" result happens quickly!
-
+'''
 def slowarray(array, l, sleep):
     for i,c in enumerate(array[0]):
         with l:
@@ -364,141 +246,48 @@ def appendtofilename(filename, append):
     return newname
 
 def CleanUpTimedTestBooks():
-    allfiles = os.listdir(testbookdir)
-    for file in allfiles:
-        if '.txt' == os.path.splitext(file)[1].lower():
-            os.remove(os.path.join(testbookdir, file))
+    #TODO:allfiles = os.listdir(testbookdir)
+    #for file in allfiles:
+    #    if '.txt' == os.path.splitext(file)[1].lower():
+    #TODO:       os.remove(os.path.join(testbookdir, file))
+    pass
 
 class ControllerTestLong(unittest.TestCase):
     def setUp(self):
-        self.booklist = []
-        self.booknames = SetUpTestBooks()
-        for bookname,bookpath in self.booknames.iteritems():
-            self.booklist.append(bookpath)
+        self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
+        self.testdata.make_testcase(original_number=3, final_number=6)
+        #self.booklist = []
+    #TODO:    self.booknames = SetUpTestBooks()
+        #for bookname,bookpath in self.booknames.iteritems():
+            #self.booklist.append(bookpath)
     def test_basictest(self): #Just run through some books to be sure we don't crash
         library = Library.Library()
-        Controller.process_books(library, book_text_files=self.booklist)
+        Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
         self.assertTrue(library.get_book_count() > 0)  
 
-def countcompares(num):
-    total = 0
-    for i in xrange(num):
-        total += i
-    return total
+#def countcompares(num):
+#    total = 0
+#    for i in xrange(num):
+#        total += i
+#    return total
             
 class CompleteRunthroughTest(unittest.TestCase):
-    def SetUpTimedTestBooks(self):
-        archive = ZipFile(os.path.join(testbookdir,'samplebooks.zip'))
-        bookarchive = archive.namelist()
-        self.booknames = []
-        self.anthology=[]
-        self.duplicates=[]
-        self.totalpandc = 0 #since this is a symetric relationship, parents and children are equal in number
-        for book in bookarchive:
-            newname, ext = os.path.splitext(book)
-            newname = os.path.join(testbookdir, newname +ext)
-            with open(newname, 'w') as of:
-                mybook = archive.open(book)
-                of.write(mybook.read())
-            self.booknames.append(newname)
-        if len(bookarchive):
-            e = ErrorMaker()
-            random.seed(42) #make sure tests are consistent across runs!
-            for i in xrange(4): #Build some anthologies *before* we duplicate... we search on unique words!
-                antname = os.path.join(testbookdir, 'Anthology{0}.txt'.format(i))
-                antlist = [antname]
-                text = ""
-                for j in random.sample(self.booknames, random.randint(2,6)):
-                    antlist.append(j)
-                    with open(j, 'r') as book:
-                        more = book.read()
-                        text += more
-                self.totalpandc += len(antlist) - 1
-                with open(os.path.join(testbookdir, antname), 'w') as ant:
-                    ant.write(text)
-                self.booknames.append(antname)
-                self.anthology.append(antlist)
-            for i in random.sample(self.booknames,9): #Pick some to make duplicates of
-                if i.find('Anthology') > -1:
-                    break
-                dupe = appendtofilename(i, 'd')
-                with open(i,'r') as b1:
-                    with open(dupe, 'w') as b2:
-                        b2.write(b1.read())
-                self.booknames.append(dupe)
-                self.duplicates.append((i,dupe))
-            for i in random.sample(self.booknames,9): #Pick some more (maybe double dupe) to make duplicates of
-                if i.find('Anthology') > -1:
-                    break
-                dupe = appendtofilename(i, 'd')
-                with open(i,'r') as b1:
-                    with open(dupe, 'w') as b2:
-                        b2.write(b1.read())
-                self.booknames.append(dupe)
-                self.duplicates.append((i,dupe))
-            for i in random.sample(self.booknames, 18): #Muss up some of the books
-                if i.find('Anthology') > -1:
-                    break
-                efile = appendtofilename(i, 'e')
-                with open(i, 'r') as b1:
-                    with open(efile, 'w') as b2:
-                        text = b1.read()
-                        pagejunk = "Somereptitiousgarbabe/likean/http/orsomethng"
-                        if random.randint(0,6):
-                            pagejunk = False
-                        text = e.IntroduceErrors(text, random.randint(600,4000), e.RelativeErrors(24,6,12,2,1,1), pagejunk)
-                        b2.write(text)
-                self.booknames.append(efile)
-                self.duplicates.append((i,efile))
-        return self.booknames
     def setUp(self):
-        print 'begin big setup (may take a few seconds)'
-        self.booknames = self.SetUpTimedTestBooks()
-    def tearDown(self):
-        CleanUpTimedTestBooks()
-        pass
-    def verify_matches(self, library):
-        anthologyhits = 0
-        anthologymax = 0
-        dupehits = 0
-        dupemax = len(self.duplicates)
-        for ant in self.anthology:
-            antname = ant[0]
-            anthologymax += len(ant[1:])
-            children = library.get_book_textfile(antname).get_relationships()['P']
-            for child in ant[1:]:
-                for childid in children:
-                    name = library.get_book_uid(childid).get_textfilepath()
-                    if name.find(child[:-4]) > -1:
-                        anthologyhits += 1
-                        break
-        for original, dupe in self.duplicates:
-            obook = library.get_book_textfile(original)
-            matchids = obook.get_relationships()['M']
-            for id in matchids:
-                filename = library.get_book_uid(id).get_textfilepath()
-                if dupe.find(filename[:-4]) > -1:
-                    dupehits += 1
-                    break
-        #now check false positives:
-        parenthits = 0
-        for name in self.booknames:
-            parents = library.get_book_textfile(name).get_relationships()['P']
-            parenthits += len(parents)
-        return (anthologymax, anthologyhits, dupemax, dupehits, self.totalpandc, parenthits)
-                
-    def test_SortCollection(self):
-        print 'Beginning book processing'
-        start = time.time()
+        print 'Setting up book test archive (this might take some time)'
+        self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
+        self.testdata.make_testcase(final_number=50)
+        print 'Test case generated.'
+    def test_compelete(self):
+        print 'Beginning book matching'
         library = Library.Library()
-        Controller.process_books(library, book_text_files=self.booknames)
-        end = time.time()
-        compares = countcompares(len(self.booknames))
-        print library.print_pretty_tree()
-        print 'Processed {0} comparisons in {1} seconds.'.format(compares, end - start)
-        self.assertTrue(library.get_book_count() > 0)
-        results =  self.verify_matches(library)
-        print 'Anthology children found: ({1}/{0})\nDuplicates found: ({3}/{2})\nParents found: ({5}/{4})'.format(*results)
+        start = time.time()
+        Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
+        runtime = time.time()-start
+        #print library.print_pretty_tree()
+        print 'Finished Processing {0} books in {1} seconds'.format(len(self.testdata.get_testbooks()),runtime)
+        verification = self.testdata.verify_results(library)
+        self.testdata.print_formatted_results(verification)
+        self.assertTrue(True)
 
 def runTests(timed = False):
     shorttests = (FingerprintTest, BookTestShort, LibraryTestShort, UtilityTestShort)
