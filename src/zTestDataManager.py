@@ -469,6 +469,18 @@ class TestBookManager ():
         else:
             results['children']['falsehitscore'] = 0
         return results
+    @staticmethod
+    def combine_results(results):
+        totalpossible = results['duplicates']['maxhits'] + results['parents']['maxhits'] + results['children']['maxhits']
+        totalhits = results['duplicates']['hits'] + results['parents']['hits'] + results['children']['hits']
+        totalhits -= (results['duplicates']['false positives'] + results['duplicates']['false positives'] + results['duplicates']['false positives'])
+        if not totalpossible:
+            if not totalhits:
+                return 1.0
+            else:
+                return 0.0
+        else:
+            return totalhits / totalpossible
     def print_formatted_results(self, results):
         print '=============================================================='
         print 'Duplicate results:'

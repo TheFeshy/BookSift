@@ -4,6 +4,7 @@
 from Fingerprint import Fingerprint
 from Exceptions import TBD, CantGetText, NotInitialized 
 import uuid
+import Compare
    
 class Book:
     '''Parameters:
@@ -81,13 +82,17 @@ class Book:
             return None
     def compare_with(self,book2):
         if self.__skip or book2.__skip:
+            Compare.gPerfCounters.quickcompares += 1
             return ('N',2) #Books we ignore are effectively no match
         elif self.id == book2.id:
+            Compare.gPerfCounters.quickcompares += 1
             return ('M',2) #technically, comparing a book with itself is a match...but don't add it to relationships; mathematicians asside "identity proofs" are not useful.
         preexisting = self.__get_existing_relationship(book2)
         if preexisting:
+            Compare.gPerfCounters.quickcompares += 1
             return preexisting
         elif self.__was_previously_compared(book2):
+            Compare.gPerfCounters.quickcompares += 1
             return ('N',2)
         if not self.__fingerprint and not book2.__fingerprint:
             raise NotInitialized('Attempted to compare books that have not been fingerprinted, or that do not have comparable fingerprints')

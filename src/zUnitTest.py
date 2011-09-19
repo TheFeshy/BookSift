@@ -79,29 +79,45 @@ class BookTestShort(unittest.TestCase):
         self.assertRaises(NotInitialized, book1.compare_with, book2)
        
 class BookTest(unittest.TestCase):
-    pass
-'''    
     def setUp(self):
-        self.books = {}
-        #TODO:self.booknames = SetUpTestBooks()
-        for bookname,bookpath in self.booknames.iteritems():
-            self.books[bookname]=Book(textfile=bookpath)
-            self.books[bookname].initialize_text_data()
+        self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
     def tearDown(self):
-        #TODO:CleanUpTestBooks()
+        #TODO: this
         pass
-    def test_identicalbooks(self): #Verify we match identical books
-        result = self.books['book0o'].compare_with(self.books['book0o'])
-        self.assertEqual(result[0],'M')
-    def test_mismatchedbooks(self): #Verify we don't match different books
-        result = self.books['book0o'].compare_with(self.books['book1o'])
-        self.assertEqual(result[0],'N')
-    def test_smallerrorbooks(self): #Verify we can match books with small errors
-        result = self.books['book0o'].compare_with(self.books['book0e'])
-        self.assertEqual(result[0],'M')
-    def test_largeerrorbooks(self): #Verify we can match books even with many errors
-        result = self.books['book2o'].compare_with(self.books['book2e'])
-        self.assertEqual(result[0],'M')
+    def test_identical_books(self):
+        self.testdata.unpack_archive(1)
+        self.testdata.make_duplicate(number=1)
+        library = Library.Library()
+        Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
+        verification = self.testdata.verify_results(library)
+        self.assertAlmostEqual(1.0, zTestDataManager.TestBookManager.combine_results(verification),3)
+        
+    def test_mismatched_books(self):
+        self.testdata.unpack_archive(2)
+        library = Library.Library()
+        Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
+        verification = self.testdata.verify_results(library)
+        self.assertAlmostEqual(1.0, zTestDataManager.TestBookManager.combine_results(verification),3)
+        
+    def test_small_error_compare(self):
+        self.testdata.unpack_archive(1)
+        e = zTestDataManager.ErrorMaker(error_rate=1600)
+        self.testdata.make_error_dupes(number=1,errormaker=e)
+        library = Library.Library()
+        Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
+        verification = self.testdata.verify_results(library)
+        self.assertAlmostEqual(1.0, zTestDataManager.TestBookManager.combine_results(verification),3)
+        
+    def test_big_error_compare(self):
+        self.testdata.unpack_archive(1)
+        e = zTestDataManager.ErrorMaker(error_rate=500, per_page_junk=True)
+        self.testdata.make_error_dupes(number=1,errormaker=e)
+        library = Library.Library()
+        Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
+        verification = self.testdata.verify_results(library)
+        self.assertAlmostEqual(1.0, zTestDataManager.TestBookManager.combine_results(verification),3)
+
+    '''
     def test_quicknomatch(self):#make certain books that aren't even close miss quickly
         curtime = time.time()
         self.books['book0o'].compare_with(self.books['book1e'])
@@ -287,6 +303,7 @@ class CompleteRunthroughTest(unittest.TestCase):
         print 'Finished Processing {0} books in {1} seconds'.format(len(self.testdata.get_testbooks()),runtime)
         verification = self.testdata.verify_results(library)
         self.testdata.print_formatted_results(verification)
+        print zTestDataManager.TestBookManager.combine_results(verification)
         self.assertTrue(True)
 
 def runTests(timed = False):
@@ -324,7 +341,7 @@ def runTests(timed = False):
 
 if __name__ == '__main__':
     
-    runTests(True)
+    runTests(False)
     
     
         

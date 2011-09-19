@@ -8,12 +8,13 @@ from __future__ import division #needed so that integer/integer = float
 import re
 from array import array
 
-from Exceptions import EmptyBook, DifferentHashes
+from Exceptions import EmptyBook, DifferentHashes, NotInitialized
+import Compare
 
 class Fingerprint:
     '''Takes the contents of a book (in text form) to initialize'''
     def __init__(self, book, hash_function=hash):
-        #Get all unqiue words in the document
+        #Get all unique words in the document
         self.__importantwords = self.__get_unique_words(book, hash_function)
         if not len(self.__importantwords):
             raise EmptyBook("Unable to locate alphabetical text to compare.")
@@ -45,22 +46,38 @@ class Fingerprint:
     def compare_with(self,fp2):
         if not self.hashcheck == fp2.hashcheck:
             raise DifferentHashes('Attempted to compare two fingerprints that have been created using different hashes')
-        size_ratio = min(self.__booklength,fp2.__booklength)/max(self.__booklength, fp2.__booklength)
-        anthology = False
-        minscore = self.__get_minscore_from_ratio(size_ratio)
-        score = Fingerprint.__lcs_custom(self.__importantwords, self.__importantset, fp2.__importantwords, fp2.__importantset, minscore)
-        if size_ratio < .8:
-            anthology = True
-        if minscore < score:
-            #We have a book that matches, let's see what the relationship is:
-            if not anthology:
-                return 'M', score
-            elif self.__booklength > fp2.__booklength:
-                return 'P',score
+        size1 = self.__booklength
+        size2 = fp2.__booklength
+        seqsize1 = len(self.__importantwords)
+        seqsize2 = len(fp2.__importantwords)
+        score = -1
+        method = 0
+        for compare in Compare.gCompareParams:
+            allowed_error = compare.allowed_errors(size1, size2, seqsize1, seqsize2)
+            meaningful_length = compare.meaningful_length(size1, size2, seqsize1, seqsize2, allowed_error)
+            min_score = compare.min_score(size1, size2, seqsize1, seqsize2)
+            score = compare.search_method(self.__importantwords, self.__importantset, fp2.__importantwords, fp2.__importantset, min_score, meaningful_length, allowed_error)
+            slow_cutoff = compare.slow_cutoff(size1, size2,seqsize1, seqsize2)
+            user_score = compare.adjust_score(score, size1, size2, seqsize1, seqsize2)
+            if score < min_score or score > slow_cutoff:
+                break
             else:
-                return 'B',score
+                Compare.gPerfCounters.fallback_compare[method] += 1
         else:
-            return 'N',1.0-score
+            if score < 0:
+                raise NotInitialized('No search types were ever created; no search was done.')
+        if min_score < score:
+            Compare.gPerfCounters.hits += 1
+            #We have a book that matches, let's see what the relationship is:
+            if (min(size1,size2)/max(size1,size2)) > 0.85:
+                return 'M', user_score
+            elif self.__booklength > fp2.__booklength:
+                return 'P',user_score
+            else:
+                return 'B',user_score
+        else:
+            Compare.gPerfCounters.misses += 1
+            return 'N',1.0-user_score
     '''Creates an array consisting of the hashes of the unique words within the book'''
     @staticmethod
     def __get_unique_words(book, my_hash):
@@ -81,48 +98,4 @@ class Fingerprint:
         #Array used to save space.  Array type is dependent on hash values though!
         #TODO: make this use the correct size on 32 bit systems
         return array('l',uniquewords)
-
-    '''This function is based on a modified version of a longest common sequence search.
-       Since all words are unique within a sequence, we can use a hash lookup instead of
-       looping through to find matches.  Also, because we are interested in overall similarity
-       more than just the "longest" match, we accumulate any match over a certain length and
-       count it towards our score.
-       
-       meaningful_length is the number of consecutive characters to be considered a meaningful
-       match
-       quick_threshold is the percentage of words that must be present in both sets'''
-    @staticmethod
-    def __lcs_custom(seq1 ,set1, seq2, set2, quick_threshold, meaningful_length = 3):
-        #Compare the shortest sequence to the longest hash for efficiency 
-        if len(seq1) < len(seq2):
-            shortseq = seq1
-            longset = set2
-        else:
-            shortseq = seq2
-            longset = set1
-        totalscore = 0
-        bestpossible = len(shortseq)
-        nextexpected = 0 #The index of the next character, if the sequences match
-        currentscore = 0
-        miss = int(len(seq1) *(1-quick_threshold))
-        for c1 in shortseq:
-            c2 = longset.get(c1)
-            if c2 == nextexpected:
-                currentscore += 1
-                nextexpected += 1
-            else:
-                miss -= 1
-                if not miss:
-                    return 0
-                if currentscore > meaningful_length: #We no longer match, but remember how much we have matched so far
-                    totalscore = totalscore + currentscore
-                if c2: #If we at least found a character somewhere in the next sequence, start matching from there
-                    nextexpected = c2 + 1
-                    currentscore = 1
-                else: #If we did not find our character somewhere, we can't start matching again yet.
-                    nextexpected = 0
-                    currentscore = 0
-        else: #Don't forget whatever score remains at the end!
-            if currentscore > meaningful_length:
-                totalscore = totalscore + currentscore
-        return totalscore / bestpossible
+    
