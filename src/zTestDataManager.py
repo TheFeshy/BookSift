@@ -6,7 +6,7 @@ import inspect
 from zipfile import ZipFile
 import os
 import re
-import sys
+import Utility
 
 
 '''This class is used to make 'OCR-like' errors in text files, to make our testing more
@@ -120,7 +120,7 @@ class ErrorMaker:
         members = inspect.getmembers(self)
         for name, value in members:
             if inspect.ismethod(value) and name.find('__error') > -1:
-                for varname, varvalue in members:#print varname.find(name[2:])
+                for varname, varvalue in members:
                     if varname.find(name[13:]) == 0:
                         oddstable.append((value, oddstotal, oddstotal + varvalue))
                         oddstotal += varvalue
@@ -170,6 +170,7 @@ class TestBookManager ():
         #a special exception is the 'o' flag - adding any flag except 'o' will overwrite
         #the 'o' flag.  It returns the new name, and a base name with no mangling or extension
         #(useful for checking to ensure duplicate books are not both added to an anthology!)
+        #TODO: This is no longer used to fetch "root" names; remove that code.
         basename, ext = filename.rsplit('.',1)
         matches = re.search('(.+)(\[.+\])$', basename)
         if matches:
@@ -224,11 +225,11 @@ class TestBookManager ():
             else:
                 flag = 'd'
             dupename = self.__mangle_filename(file, flag)
-            self.relationships[dupename] = self.relationships[file]
-            self.relationships[file]['matches'].add(dupename)
+            self.relationships[dupename] = self.relationships[file] #add all of a dupe's sibs, children, and parents
             self.relationships[dupename]['matches'].add(file)
+            self.relationships[file]['matches'].add(dupename)
             for child in self.relationships[dupename]['children']:
-                #inform our new children of our existance:
+                #inform our new children of our existence:
                 self.relationships[child]['parents'].add(dupename)
             for parent in self.relationships[dupename]['parents']:
                 self.relationships[parent]['children'].add(dupename)
@@ -245,7 +246,8 @@ class TestBookManager ():
     def __check_already_anthologized(self, included, newfile):
         if newfile.find('Anthology') > -1: #We don't (currently) support adding anthologies to anthologies
             return True
-        root = self.__mangle_filename(newfile, '')
+        matches = re.search('(.+)(\[.+\])(.+)', newfile)
+        root = matches.group(1)
         for i in included:
             if i.find(root) > -1:
                 return True
@@ -259,13 +261,15 @@ class TestBookManager ():
         for book in self.relationships.iterkeys():
             if book.find('Anthology') > -1:
                 antlist.append(book)
-        for ant1 in antlist:
-            for ant2 in antlist:
-                for child1 in self.relationships[ant1]['children']:
-                    for child2 in self.relationships[ant2]['children']:
-                        if child1 == child2:
-                            self.relationships[ant1]['ambiguous'] = ant2
-                            self.relationships[ant2]['ambiguous'] = ant1
+        for i in xrange(len(antlist)):
+            ant1 = antlist[i]
+            for j in xrange(i+1,len(antlist)):
+                    ant2 = antlist[j]
+                    for child1 in self.relationships[ant1]['children']:
+                        for child2 in self.relationships[ant2]['children']:
+                            if child1 == child2:
+                                self.relationships[ant1]['ambiguous'].add(ant2)
+                                self.relationships[ant2]['ambiguous'].add(ant1)
     def make_anthology(self, number_to_include = 0):
         text = []
         if not number_to_include:
@@ -275,6 +279,7 @@ class TestBookManager ():
         oops = 100 #We don't support adding this many books; so if we get here, just give up.
         antname = os.path.join(self.testdir, 'Anthology{0}[o].txt'.format(self.antcount))
         self.antcount += 1
+        included = set()
         while number_to_include and oops:
             oops += -1
             number_to_include += -1
@@ -282,7 +287,7 @@ class TestBookManager ():
             if not self.__check_already_anthologized(included, book):
                 with open(book, 'r') as inf:
                     text.append(inf.read())
-                included = self.relationships[book]['matches']
+                included = included| self.relationships[book]['matches']
                 included.add(book)
                 self.relationships[book]['parents'].add(antname)
                 for sib in self.relationships[book]['matches']:
@@ -299,7 +304,7 @@ class TestBookManager ():
        final_number is the number of books to end up with (if int) or the percentage
        of books to wind up with based on the original (if float)'''
     def make_testcase(self, original_number=0, final_number=1.33):
-        relative_odds = {'dupes':1,'errordupes':5,'bigerrordupes':2,'anthologies':2}
+        relative_odds = {'dupes':2,'errordupes':5,'bigerrordupes':1,'anthologies':3}
         error = ErrorMaker() #default settings should be fine
         bigerror = ErrorMaker(error_rate=300, per_page_junk=True)
         if type(final_number) == float:
@@ -493,26 +498,27 @@ class TestBookManager ():
         print 'False Positives:..............................................'
         print ''.join(map(lambda x:'{0} falsely matched {1} with score {2:.1%}\n'.format(x[0][0],x[0][1], x[0][2]), results['duplicates']['fpos']))
         print '=============================================================='
-        print 'Superset results:'
-        print 'Hits: {0} out of {1} ({2:.1%})'.format(results['parents']['hits'], results['parents']['maxhits'], results['parents']['hits']/results['parents']['maxhits'])
-        print 'Average hit score: {0:.1%}'.format(results['parents']['hitscore'])
-        print 'False positives: {0}'.format(results['parents']['false positives'])
-        print 'Average false positive score: {0:.1%}'.format(results['parents']['falsehitscore'])
-        print 'Misses:.......................................................'
-        print ''.join(map(lambda x:'{0} missed matching {1}\n'.format(x[0][0],x[0][1]), results['parents']['misslist']))
-        print 'False Positives:..............................................'
-        print ''.join(map(lambda x:'{0} falsely matched {1} with score {2:.1%}\n'.format(x[0][0],x[0][1], x[0][2]), results['parents']['fpos']))
-        print '=============================================================='
-        print 'Subset results:'
-        print 'Hits: {0} out of {1} ({2:.1%})'.format(results['children']['hits'], results['children']['maxhits'], results['children']['hits']/results['children']['maxhits'])
-        print 'Average hit score: {0:.1%}'.format(results['children']['hitscore'])
-        print 'False positives: {0}'.format(results['children']['false positives'])
-        print 'Average false positive score: {0:.1%}'.format(results['children']['falsehitscore'])
-        print 'Misses:.......................................................'
-        print ''.join(map(lambda x:'{0} missed matching {1}\n'.format(x[0][0],x[0][1]), results['children']['misslist']))
-        print 'False Positives:..............................................'
-        print ''.join(map(lambda x:'{0} falsely matched {1} with score {2:.1%}\n'.format(x[0][0],x[0][1], x[0][2]), results['children']['fpos']))
-        print '=============================================================='
+        if results['parents']['maxhits'] > 0:
+            print 'Superset results:'
+            print 'Hits: {0} out of {1} ({2:.1%})'.format(results['parents']['hits'], results['parents']['maxhits'], results['parents']['hits']/results['parents']['maxhits'])
+            print 'Average hit score: {0:.1%}'.format(results['parents']['hitscore'])
+            print 'False positives: {0}'.format(results['parents']['false positives'])
+            print 'Average false positive score: {0:.1%}'.format(results['parents']['falsehitscore'])
+            print 'Misses:.......................................................'
+            print ''.join(map(lambda x:'{0} missed matching {1}\n'.format(x[0][0],x[0][1]), results['parents']['misslist']))
+            print 'False Positives:..............................................'
+            print ''.join(map(lambda x:'{0} falsely matched {1} with score {2:.1%}\n'.format(x[0][0],x[0][1], x[0][2]), results['parents']['fpos']))
+            print '=============================================================='
+            print 'Subset results:'
+            print 'Hits: {0} out of {1} ({2:.1%})'.format(results['children']['hits'], results['children']['maxhits'], results['children']['hits']/results['children']['maxhits'])
+            print 'Average hit score: {0:.1%}'.format(results['children']['hitscore'])
+            print 'False positives: {0}'.format(results['children']['false positives'])
+            print 'Average false positive score: {0:.1%}'.format(results['children']['falsehitscore'])
+            print 'Misses:.......................................................'
+            print ''.join(map(lambda x:'{0} missed matching {1}\n'.format(x[0][0],x[0][1]), results['children']['misslist']))
+            print 'False Positives:..............................................'
+            print ''.join(map(lambda x:'{0} falsely matched {1} with score {2:.1%}\n'.format(x[0][0],x[0][1], x[0][2]), results['children']['fpos']))
+            print '=============================================================='
             
             
 

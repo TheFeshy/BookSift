@@ -303,7 +303,7 @@ class CompleteRunthroughTest(unittest.TestCase):
         print 'Finished Processing {0} books in {1} seconds'.format(len(self.testdata.get_testbooks()),runtime)
         verification = self.testdata.verify_results(library)
         self.testdata.print_formatted_results(verification)
-        print zTestDataManager.TestBookManager.combine_results(verification)
+        print 'Total Score: {0:.1%}'.format(zTestDataManager.TestBookManager.combine_results(verification))
         self.assertTrue(True)
 
 def runTests(timed = False):
@@ -341,7 +341,7 @@ def runTests(timed = False):
 
 if __name__ == '__main__':
     
-    runTests(False)
+    runTests(True)
     
     
         
