@@ -1,2 +1,5 @@
 zHackingAround.py
+*_wrap.c
+*.so
+OptimizeCompare.py
 
