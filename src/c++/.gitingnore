@@ -1,3 +1,7 @@
 *.o
 *.pyc
 *_wrap.c
+*_wrap.cxx
+*_wrap.cpp
+*.cxx
+

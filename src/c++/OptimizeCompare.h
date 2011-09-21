@@ -1,3 +1,6 @@
 /* File: OptimizeCompare.h */
 
-int fact(int n);
+#include <map>
+
+//int test(std::map<long long, long int>& m);
+

@@ -1,9 +1,12 @@
 /* File: OptimizeCompare.i */
 %module OptimizeCompare
+%include <std_map.i>
 
 %{
 #define SWIG_FILE_WITH_INIT
 #include "OptimizeCompare.h"
 %}
 
-int fact(int n);
+%template(FingerprintCDict) ::std::map<long long, long int>;
+
+

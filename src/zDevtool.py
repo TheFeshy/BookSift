@@ -16,23 +16,38 @@ class DevToolProblem(Exception):
 if __name__ == '__main__':
     try:
         print 'Compiling C++ based modules using gcc and swig'
-        os.chdir('c++')
-        status, output = commands.getstatusoutput('swig -python OptimizeCompare.i')
+        os.chdir('c++') #TODO: try with -builtin for speed!
+        '''status, output = commands.getstatusoutput('swig -c++ -python OptimizeCompare.i')
         if status:
             raise DevToolProblem('error: {0}'.format(output))
-        flags = "/usr/include/python2.7"
-        status, output = commands.getstatusoutput('gcc -O2 -fPIC -c OptimizeCompare.cpp OptimizeCompare_wrap.c -I{0}'.format(flags))
+        else:
+            print output'''
+        '''flags = "/usr/include/python2.7"
+        status, output = commands.getstatusoutput('gcc -Wall -O2 -fPIC  -c OptimizeCompare.cpp OptimizeCompare_wrap.cxx -I{0}'.format(flags))
         if status:
             raise DevToolProblem('error: {0}'.format(output))
-        status, output = commands.getstatusoutput('gcc -shared OptimizeCompare.o OptimizeCompare_wrap.o -o _OptimizeCompare.so')
+        else:
+            print output
+        status, output = commands.getstatusoutput('gcc -W1 -shared --no-undefined -lstdc++ -lpython2.7 OptimizeCompare.o OptimizeCompare_wrap.o -o _OptimizeCompare.so')
         if status:
             raise DevToolProblem('error: {0}'.format(output))
+        else:
+            print output
+        '''
+        status, output = commands.getstatusoutput('python setup.py build_ext --inplace')
+        if status:
+            raise DevToolProblem('error: {0}'.format(output))
+        else:
+            print output
+        '''status, output = commands.getstatusoutput('rm OptimizeCompare_wrap.cxx')
+        if status:
+            raise DevToolProblem('error: {0}'.format(output))'''
         status, output = commands.getstatusoutput('mv _OptimizeCompare.so ../_OptimizeCompare.so')
         if status:
             raise DevToolProblem('error: {0}'.format(output))
         status, output = commands.getstatusoutput('mv OptimizeCompare.py ../OptimizeCompare.py')
         if status:
-            raise DevToolProblem('error: {0}'.format(output))
+            raise DevToolProblem('error: {0}'.format(output))        
         os.chdir('../')
         print 'Verifying program correctness with Unit Tests'
         if not zUnitTest.runTests():

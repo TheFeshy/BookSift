@@ -69,4 +69,19 @@ def compare_all_despite_starvation(all, allsize, function, sleep, *args, **kwarg
                     time.sleep(sleep)
                 any_unfinished = False
                 i = 0
+''' For when we start looking in to minhash, here's a way to make an arbitrary number
+of hash functions: (http://stackoverflow.com/questions/2255604/hash-functions-family-generator-in-python)
 
+import random
+
+_memomask = {}
+
+def hash_function(n):
+  mask = _memomask.get(n)
+  if mask is None:
+    random.seed(n)
+    mask = _memomask[n] = random.getrandbits(32)
+  def myhash(x):
+    return hash(x) ^ mask
+  return myhash
+'''
