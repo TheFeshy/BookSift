@@ -99,3 +99,7 @@ class Fingerprint:
         #TODO: make this use the correct size on 32 bit systems
         return array('l',uniquewords)
     
+if __name__ == '__main__':
+    import zUnitTest
+    zUnitTest.run_testcase(zUnitTest.FingerprintTest)
+    

@@ -13,49 +13,51 @@ class DevToolProblem(Exception):
     def __init__(self,msg):
         self.msg = msg
 
-if __name__ == '__main__':
+def compile_and_setup():
+    print '===== Compiling code, creating plugin, cleaing up ====='
+    print 'Compiling C++ based modules using distutils'
     try:
-        print 'Compiling C++ based modules using gcc and swig'
-        os.chdir('c++') #TODO: try with -builtin for speed!
-        '''status, output = commands.getstatusoutput('swig -c++ -python OptimizeCompare.i')
-        if status:
-            raise DevToolProblem('error: {0}'.format(output))
-        else:
-            print output'''
-        '''flags = "/usr/include/python2.7"
-        status, output = commands.getstatusoutput('gcc -Wall -O2 -fPIC  -c OptimizeCompare.cpp OptimizeCompare_wrap.cxx -I{0}'.format(flags))
-        if status:
-            raise DevToolProblem('error: {0}'.format(output))
-        else:
-            print output
-        status, output = commands.getstatusoutput('gcc -W1 -shared --no-undefined -lstdc++ -lpython2.7 OptimizeCompare.o OptimizeCompare_wrap.o -o _OptimizeCompare.so')
-        if status:
-            raise DevToolProblem('error: {0}'.format(output))
-        else:
-            print output
-        '''
+        os.chdir('c++')
         status, output = commands.getstatusoutput('python setup.py build_ext --inplace')
         if status:
             raise DevToolProblem('error: {0}'.format(output))
         else:
             print output
-        '''status, output = commands.getstatusoutput('rm OptimizeCompare_wrap.cxx')
-        if status:
-            raise DevToolProblem('error: {0}'.format(output))'''
+        print 'Tidying up'
         status, output = commands.getstatusoutput('mv _OptimizeCompare.so ../_OptimizeCompare.so')
         if status:
             raise DevToolProblem('error: {0}'.format(output))
         status, output = commands.getstatusoutput('mv OptimizeCompare.py ../OptimizeCompare.py')
         if status:
-            raise DevToolProblem('error: {0}'.format(output))        
+            raise DevToolProblem('error: {0}'.format(output))   
+    finally:     
         os.chdir('../')
-        print 'Verifying program correctness with Unit Tests'
-        if not zUnitTest.runTests():
-            raise DevToolProblem('Unit Tests failed; stopping here')        
+
+def run_tests(short = True, medium=True, long=True):
+    suites = zUnitTest.build_test_suites()
+    skipif = False
+    if short:
+        print "Running short tests"
+        skipif = not zUnitTest.run_suite(suites['short'], 'short', skipif)
+    if medium:
+        print "Running medium tests"
+        skipif = not zUnitTest.run_suite(suites['medium'],'medium', skipif)
+    if long:
+        print "Running long tests"
+        skipif = not zUnitTest.run_suite(suites['long'],'long', skipif)
+    if not skipif:
+        return True
+    else:
+        return False
+
+def update_git():
+    try:
         os.chdir('../')
         status, output = commands.getstatusoutput('git add -A')
         if status:
             raise DevToolProblem('error: {0}'.format(output))
+        else:
+            print output
         status, output = commands.getstatusoutput('git diff --cached')
         if status:
             raise DevToolProblem('error: {0}'.format(output))
@@ -67,6 +69,12 @@ if __name__ == '__main__':
                 print line
         print '========================================================='
         choice = raw_input('Accept these changes? (y/n)')
+        if 'n' == choice.lower():
+            status, output = commands.getstatusoutput('git reset .')
+            if status:
+                raise DevToolProblem('error: {0}'.format(output))
+            else:
+                print output
         if 'y' == choice.lower():
             msg = raw_input('Enter commit message')
             status, output = commands.getstatusoutput('git commit -m "{0}"'.format(msg))
@@ -79,6 +87,32 @@ if __name__ == '__main__':
                 print output
                 if status and not output.find('nothing to commit'):
                     raise DevToolProblem('error: {0}'.format(output))
+    finally:
+        os.chdir('src')
+    
+if __name__ == '__main__':
+    try:
+        input = ''
+        compile_and_setup()
+        while not 'q' == input.lower():
+            print "Choose:"
+            print "1) Run quick tests"
+            print "2) Run quick and medium tests"
+            print "3) Run quick, medium, and long tests"
+            print "G) Run quick and medium tests, then update git"
+            print "Q) Quit"
+            input = raw_input()
+
+            if '1' == input:
+                run_tests(True,False,False)
+            elif '2' == input:
+                run_tests(True,True,True)
+            elif '3' == input:
+                run_tests(True,True,True)
+            elif 'g' == input.lower():
+                result = run_tests(True,True,False)
+                if result:
+                    update_git()         
         print 'Devtool completed.'
     except DevToolProblem as e:
         print "Encountered a problem.  The error was:"

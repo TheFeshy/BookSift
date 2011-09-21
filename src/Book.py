@@ -108,7 +108,9 @@ class Book:
             book2.__supersetof[self.id]=result[1]
         return result
 
-    
+if __name__ == '__main__':
+    import zUnitTest
+    zUnitTest.run_testcase(zUnitTest.BookTest)
                 
                 
             

@@ -67,5 +67,7 @@ def process_books(library, calibre_ids=None, book_text_files=None, multi_thread=
         raise TBD('Multithreading is not yet implimented')
     #TODO: must add the completed scan uuid to books when finished
         
-    
+if __name__ == '__main__':
+    import zUnitTest
+    zUnitTest.run_testcase(zUnitTest.ControllerTest)  
    

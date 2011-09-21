@@ -1,14 +1,13 @@
-'''This is a collection of tools useful for testing and verification.  Nothing in here
-   should be used outside of the test cases.'''
+'''Unit test cases for every class
 
-import random
-import array
+   There are several types of tests, denoted by a prefix on the function name:
+   
+   test_short_*  a test with this name should expect to complete in a fraction of a second
+   test_medium_* a test with this name should complete within, at most, a few seconds
+   test_long_*   a test with this name could take several seconds to complete'''
+
 import unittest
-from zipfile import ZipFile
-import os.path
 import time
-import pickle
-import tempfile
 import threading
 
 from Fingerprint import Fingerprint
@@ -46,37 +45,28 @@ class FingerprintTest(unittest.TestCase):
     def uselesshash(word):
         return 42
         
-    def test_emptybook(self): #Empty books should fail to be fingerprinted
+    def test_short_emptybook(self): #Empty books should fail to be fingerprinted
         self.assertRaises(EmptyBook, Fingerprint, self.books['emptybook']) 
-    def test_numericbook(self): #Books that have no alphabetical characters should fail to be fingerprinted
+    def test_short_numericbook(self): #Books that have no alphabetical characters should fail to be fingerprinted
         self.assertRaises(EmptyBook, Fingerprint, self.books['numericbook'])
-    def test_differenthash(self): #Verify that trying to compare fingerprings with different hashes fails
+    def test_short_differenthash(self): #Verify that trying to compare fingerprings with different hashes fails
         self.assertRaises(DifferentHashes, self.fingerprints['book1'].compare_with, Fingerprint(self.books['book1'], FingerprintTest.uselesshash))
-    def test_compareidentical(self): #Verify that identical books are marked as matches
+    def test_short_compareidentical(self): #Verify that identical books are marked as matches
         self.assertEqual(self.fingerprints['book1'].compare_with(self.fingerprints['book1'])[0],'M')
-    def test_comparenomatch(self): #Verify that different books are *not* marked as matches
+    def test_short_comparenomatch(self): #Verify that different books are *not* marked as matches
         self.assertEqual(self.fingerprints['book1'].compare_with(self.fingerprints['book2'])[0],'N')
-    def test_comparefuzzymatch(self): #Verify that books with some errors are still marked as matches
+    def test_short_comparefuzzymatch(self): #Verify that books with some errors are still marked as matches
         self.assertEqual(self.fingerprints['book1'].compare_with(self.fingerprints['book1errors'])[0],'M')
-    def test_caseinsensitivity(self): #Verify that the case of words in the book does not matter.
+    def test_short_caseinsensitivity(self): #Verify that the case of words in the book does not matter.
         self.assertEqual(self.fingerprints['book1'].compare_with(self.fingerprints['book1upper'])[0],'M')
-    def test_comparesuperset(self): #Verify that we can identify if a book is a superset of another book
+    def test_short_comparesuperset(self): #Verify that we can identify if a book is a superset of another book
         self.assertEqual(self.fingerprints['book1'].compare_with(self.fingerprints['book1partial'])[0],'P')
-    def test_comparesubset(self): #Verify that we can identify if a book is a subset of another book
+    def test_short_comparesubset(self): #Verify that we can identify if a book is a subset of another book
         self.assertEqual(self.fingerprints['book1partial'].compare_with(self.fingerprints['book1'])[0],'B')
-    def test_comparefuzzysuperset(self): #Verify that we can identify if a book is a superset of another book, even with errors
+    def test_short_comparefuzzysuperset(self): #Verify that we can identify if a book is a superset of another book, even with errors
         self.assertEqual(self.fingerprints['book1'].compare_with(self.fingerprints['book1partialerrors'])[0],'P')
-    def test_comparefuzzysubset(self): #Verify that we can identify if a book is a subset of another book, even with errors
+    def test_short_comparefuzzysubset(self): #Verify that we can identify if a book is a subset of another book, even with errors
         self.assertEqual(self.fingerprints['book1partialerrors'].compare_with(self.fingerprints['book1'])[0],'B')
-    
-class BookTestShort(unittest.TestCase):
-    def test_failstoreadnonexistantfile(self): #make sure we raise the proper exception if a file doesn't exist or can't be read
-        book = Book(textfile='invalidfile.txt')
-        self.assertRaises(CantGetText, book.initialize_text_data,hash)
-    def test_failstocompareunitializedbooks(self):
-        book1 = Book(textfile='notused.txt')
-        book2 = Book(textfile='alsonotused.txt')
-        self.assertRaises(NotInitialized, book1.compare_with, book2)
        
 class BookTest(unittest.TestCase):
     def setUp(self):
@@ -84,7 +74,14 @@ class BookTest(unittest.TestCase):
     def tearDown(self):
         #TODO: this
         pass
-    def test_identical_books(self):
+    def test_short_failstoreadnonexistantfile(self): #make sure we raise the proper exception if a file doesn't exist or can't be read
+        book = Book(textfile='invalidfile.txt')
+        self.assertRaises(CantGetText, book.initialize_text_data,hash)
+    def test_short_failstocompareunitializedbooks(self):
+        book1 = Book(textfile='notused.txt')
+        book2 = Book(textfile='alsonotused.txt')
+        self.assertRaises(NotInitialized, book1.compare_with, book2)
+    def test_medium_identical_books(self):
         self.testdata.unpack_archive(1)
         self.testdata.make_duplicate(number=1)
         library = Library.Library()
@@ -92,14 +89,14 @@ class BookTest(unittest.TestCase):
         verification = self.testdata.verify_results(library)
         self.assertAlmostEqual(1.0, zTestDataManager.TestBookManager.combine_results(verification),3)
         
-    def test_mismatched_books(self):
+    def test_medium_mismatched_books(self):
         self.testdata.unpack_archive(2)
         library = Library.Library()
         Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
         verification = self.testdata.verify_results(library)
         self.assertAlmostEqual(1.0, zTestDataManager.TestBookManager.combine_results(verification),3)
         
-    def test_small_error_compare(self):
+    def test_medium_small_error_compare(self):
         self.testdata.unpack_archive(1)
         e = zTestDataManager.ErrorMaker(error_rate=1600)
         self.testdata.make_error_dupes(number=1,errormaker=e)
@@ -108,7 +105,7 @@ class BookTest(unittest.TestCase):
         verification = self.testdata.verify_results(library)
         self.assertAlmostEqual(1.0, zTestDataManager.TestBookManager.combine_results(verification),3)
         
-    def test_big_error_compare(self):
+    def test_medium_big_error_compare(self):
         self.testdata.unpack_archive(1)
         e = zTestDataManager.ErrorMaker(error_rate=500, per_page_junk=True)
         self.testdata.make_error_dupes(number=1,errormaker=e)
@@ -172,8 +169,8 @@ def testfunc(n1, n2, result, bogus):
             result[0][0][0] = result[0][0][0] + n1 + n2
     return retval
         
-class UtilityTestShort(unittest.TestCase):
-    def test_starved_compare_quick(self): #Verify that the "compare_all_despite_starvation" method works identical to a simple double loop
+class UtilityTest(unittest.TestCase):
+    def test_short_starved_compare_quick(self): #Verify that the "compare_all_despite_starvation" method works identical to a simple double loop
         testarray = [x for x in range(12)]
         total = 0 #We will test that all pairs are summed by getting the total of all pair additions
         paircount = 0
@@ -189,10 +186,7 @@ class UtilityTestShort(unittest.TestCase):
         result = [0,]
         Utility.compare_all_despite_starvation(testarray2, len(testarray2), testfunc, 0, (result,l))
         self.assertEqual(total, result.pop())
-        
-
-class UtilityTestLong(unittest.TestCase):
-    def test_slowlygeneratedarray(self): #Verify that the "compare_all_despite_starvation" works even when being forced to wait
+    def test_long_slowlygeneratedarray(self): #Verify that the "compare_all_despite_starvation" works even when being forced to wait
         testarray = [x for x in range(50)]
         total = 0 #We will test that all pairs are summed by getting the total of all pair additions
         paircount = 0
@@ -209,8 +203,8 @@ class UtilityTestLong(unittest.TestCase):
         Utility.compare_all_despite_starvation(testarray2, len(testarray2), testfunc, 0.02, (result,l))
         self.assertEqual(total, result.pop())
         
-class LibraryTestShort(unittest.TestCase):
-    def test_storeretrievebookbyuuid(self): #Verify the library can add and get books
+class LibraryTest(unittest.TestCase):
+    def test_short_storeretrievebookbyuuid(self): #Verify the library can add and get books
         book = Book(textfile='invalidfile.txt')
         library = Library.Library()
         library.add_book(book)
@@ -218,7 +212,7 @@ class LibraryTestShort(unittest.TestCase):
         if library.get_book_uid(book.id):
             testvalue = True
         self.assertTrue(testvalue)
-    def test_storeretrievebookbycalibreid(self): #Verify the library can add and get books by calibre id
+    def test_short_storeretrievebookbycalibreid(self): #Verify the library can add and get books by calibre id
         book = Book(calibreid=100)
         library = Library.Library()
         library.add_book(book)
@@ -226,7 +220,7 @@ class LibraryTestShort(unittest.TestCase):
         if library.get_book_cid(book.calibreid):
             testvalue = True
         self.assertTrue(testvalue)
-    def test_failstofindnonexistantbookbyid(self):#Verfy we aren't finding ghost books
+    def test_short_failstofindnonexistantbookbyid(self):#Verfy we aren't finding ghost books
         book = Book(calibreid=100)
         library = Library.Library()
         library.add_book(book)
@@ -234,7 +228,7 @@ class LibraryTestShort(unittest.TestCase):
         if library.get_book_cid(101):
             testvalue = True
         self.assertFalse(testvalue)
-    def test_deletingbook(self): #make sure delete actually removes books from the library
+    def test_short_deletingbook(self): #make sure delete actually removes books from the library
         book = Book(textfile='invalidfile.txt')
         library = Library.Library()
         library.add_book(book)
@@ -247,7 +241,7 @@ class LibraryTestShort(unittest.TestCase):
         if library.get_book_uid(book.id):
             testvalue = True
         self.assertFalse(testvalue)
-    def test_updatbook(self): #make certain that the library updates books properly
+    def test_short_updatbook(self): #make certain that the library updates books properly
         book = Book(textfile='invalidfile.txt')
         library = Library.Library()
         book.statusmsg = False
@@ -256,36 +250,14 @@ class LibraryTestShort(unittest.TestCase):
         book.statusmsg = True
         self.assertTrue(library.get_book_uid(book.id).statusmsg)
 
-def appendtofilename(filename, append):
-    newname, ext = os.path.splitext(filename)
-    newname = newname+ append + ext
-    return newname
-
-def CleanUpTimedTestBooks():
-    #TODO:allfiles = os.listdir(testbookdir)
-    #for file in allfiles:
-    #    if '.txt' == os.path.splitext(file)[1].lower():
-    #TODO:       os.remove(os.path.join(testbookdir, file))
-    pass
-
-class ControllerTestLong(unittest.TestCase):
+class ControllerTest(unittest.TestCase):
     def setUp(self):
         self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
         self.testdata.make_testcase(original_number=3, final_number=6)
-        #self.booklist = []
-    #TODO:    self.booknames = SetUpTestBooks()
-        #for bookname,bookpath in self.booknames.iteritems():
-            #self.booklist.append(bookpath)
-    def test_basictest(self): #Just run through some books to be sure we don't crash
+    def test_long_basictest(self): #Just run through some books to be sure we don't crash
         library = Library.Library()
         Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
         self.assertTrue(library.get_book_count() > 0)  
-
-#def countcompares(num):
-#    total = 0
-#    for i in xrange(num):
-#        total += i
-#    return total
             
 class CompleteRunthroughTest(unittest.TestCase):
     def setUp(self):
@@ -293,7 +265,7 @@ class CompleteRunthroughTest(unittest.TestCase):
         self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
         self.testdata.make_testcase(final_number=50)
         print 'Test case generated.'
-    def test_compelete(self):
+    def test_long_compelete(self):
         print 'Beginning book matching'
         library = Library.Library()
         start = time.time()
@@ -306,42 +278,43 @@ class CompleteRunthroughTest(unittest.TestCase):
         print 'Total Score: {0:.1%}'.format(zTestDataManager.TestBookManager.combine_results(verification))
         self.assertTrue(True)
 
-def runTests(timed = False):
-    shorttests = (FingerprintTest, BookTestShort, LibraryTestShort, UtilityTestShort)
-    
-    longtests = (BookTest, UtilityTestLong, ControllerTestLong)
-    
-    timedtests = (CompleteRunthroughTest,)
-    
-    shortsuite = unittest.TestSuite()
-    for test in shorttests:
-        shortsuite.addTest(unittest.makeSuite(test, 'test'))
+def build_test_suites():
+    myTestSuites = {}
+    test_cases = [FingerprintTest, BookTest, LibraryTest, UtilityTest,ControllerTest]
+    test_types = ['short', 'medium', 'long']
+    for type in test_types:
+        suite = unittest.TestSuite()
+        for case in test_cases:
+            suite.addTest(unittest.makeSuite(case, 'test_{0}'.format(type)))
+        myTestSuites[type] = suite
+    return myTestSuites
+
+def run_testcase(case):
     runner = unittest.TextTestRunner()
-    testresults = runner.run(shortsuite)
-    if testresults.failures or testresults.errors:
-        print 'Did not pass quick check; skipping longer checks'
-        return False
-    if not timed:
-        longsuite = unittest.TestSuite()
-        for test in longtests:
-            longsuite.addTest(unittest.makeSuite(test, 'test'))
-        testresults = runner.run(longsuite)
-        if testresults.failures or testresults.errors:
-            return False
-        return True
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(case, 'test'))
+    runner.run(suite)
+
+def run_suite(suite, name = '', skipif=False):
+    if skipif:
+        print "Failed previous tests, skipping {0}".format(name)
     else:
-        timedsuite = unittest.TestSuite()
-        for test in timedtests:
-            timedsuite.addTest(unittest.makeSuite(test, 'test'))
-        testresults = runner.run(timedsuite)
+        runner = unittest.TextTestRunner()
+        print "Running suite {0}".format(name)
+        testresults = runner.run(suite)
         if testresults.failures or testresults.errors:
             return False
-        return True
-        
+        else:
+            return True        
 
 if __name__ == '__main__':
     
-    runTests(True)
+    skipif = False
+    global myTestSuites
+    suites = build_test_suites()
+    print "Running all available tests"
+    for name, suite in suites.iteritems():
+        skipif = not run_suite(suite, name, skipif) 
     
     
         

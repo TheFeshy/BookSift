@@ -87,5 +87,7 @@ class Library():
             text+= i.__str__()
         return text
             
-            
+if __name__ == '__main__':
+    import zUnitTest
+    zUnitTest.run_testcase(zUnitTest.LibraryTest)
     
