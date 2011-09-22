@@ -5,7 +5,8 @@ from Fingerprint import Fingerprint
 from Exceptions import TBD, CantGetText, NotInitialized 
 import uuid
 import Compare
-   
+import Cfg
+
 class Book:
     '''Parameters:
        id is the calibre id, or 0 if not using calibre

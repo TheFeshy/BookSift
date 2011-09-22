@@ -162,7 +162,7 @@ class TestBookManager ():
         self.testdir = testdir
         self.unpacked = False
         self.antcount = 0
-        self.usedflags = set()
+        self.usedflags = {}
     def __del__(self):
         #TODO: clean up our books when we're done playing with them.
         pass
@@ -182,10 +182,14 @@ class TestBookManager ():
             flags = ''
         flags += newflags
         newname = '{0}[{1}].{2}'.format(root, flags, ext)
-        if newname in self.usedflags and flags:
-            newname = '{0}[{1}2].{2}'.format(root, flags, ext)
+        newnumb = self.usedflags.get(newname)
+        if flags and newnumb:
+            newnumb += 1
+            self.usedflags[newname] = newnumb
+            newname = '{0}[{1}{3}].{2}'.format(root, flags, ext, newnumb)
+        elif flags:
+            self.usedflags[newname] = 1
         if flags:
-            self.usedflags.add(newname)
             return newname
         else: #alternate version just returns the mangle-generated name
             return root
@@ -371,7 +375,10 @@ class TestBookManager ():
         for a in ambiguous: #Don't count ambiguous relationships against our totals
             for j in found:
                 if a == j:
-                    foundunique.remove(j)
+                    try:
+                        foundunique.remove(j)
+                    except:
+                        pass
                     ambig += 1
         if name in knownunique: #Don't count missing "ourselves" against us
             knownunique.remove(name)

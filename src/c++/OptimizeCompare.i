@@ -12,7 +12,7 @@
 %template(HashSequence) ::std::vector<long long>;
 
 
-float compare(std::vector<long long>, std::map<long long, long int>, const int, const int, const int);
+float compare(std::vector<long long>&, std::map<long long, long int>&, const int, const int, const int);
 bool moduleworking();
 
 

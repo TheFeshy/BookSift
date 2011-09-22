@@ -261,7 +261,7 @@ class ControllerTest(unittest.TestCase):
     def test_big_compelete(self):
         print 'Setting up book test archive (this might take some time)'
         self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
-        self.testdata.make_testcase(final_number=50)
+        self.testdata.make_testcase(final_number=75)
         print 'Test case generated. Beginning book matching'
         library = Library.Library()
         start = time.time()

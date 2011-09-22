@@ -8,5 +8,5 @@ typedef std::vector<long long> HashSequence;
 
 bool moduleworking();
 
-float compare(HashSequence, HashLookupTable, const int, const int, const int);
+float compare(HashSequence&, HashLookupTable&, const int, const int, const int);
 

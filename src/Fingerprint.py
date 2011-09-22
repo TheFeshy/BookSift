@@ -10,6 +10,9 @@ from array import array
 
 from Exceptions import EmptyBook, DifferentHashes, NotInitialized
 import Compare
+import Cfg
+if Cfg.myOptions.useC:
+    import OptimizeCompare
 
 class Fingerprint:
     '''Takes the contents of a book (in text form) to initialize'''
@@ -20,7 +23,10 @@ class Fingerprint:
             raise EmptyBook("Unable to locate alphabetical text to compare.")
         #Create a dictionary (which doubles as a 'set') of all the unique words,
         #and their index (the order they appear is important)
-        self.__importantset = {}
+        if Cfg.myOptions.useC:
+            self.__importantset = OptimizeCompare.HashLookupTable()
+        else:
+            self.__importantset = {}
         for i,c in enumerate(self.__importantwords):
             self.__importantset[c] = i
         self.__booklength = len(book)
@@ -53,10 +59,12 @@ class Fingerprint:
         score = -1
         method = 0
         for compare in Compare.gCompareParams:
-            allowed_error = compare.allowed_errors(size1, size2, seqsize1, seqsize2)
-            meaningful_length = compare.meaningful_length(size1, size2, seqsize1, seqsize2, allowed_error)
+            allowed_consecutive_error = compare.allowed_consecutive_errors(size1, size2, seqsize1, seqsize2)
+            allowed_distance_error = compare.allowed_displacement_error(size1, size2, seqsize1, seqsize2)
+            meaningful_length = compare.meaningful_length(size1, size2, seqsize1, seqsize2, allowed_consecutive_error)
             min_score = compare.min_score(size1, size2, seqsize1, seqsize2)
-            score = compare.search_method(self.__importantwords, self.__importantset, fp2.__importantwords, fp2.__importantset, min_score, meaningful_length, allowed_error)
+            count_misses = compare.count_misses
+            score = compare.search_method(self.__importantwords, self.__importantset, fp2.__importantwords, fp2.__importantset, min_score, meaningful_length, allowed_consecutive_error, allowed_distance_error, count_misses)
             slow_cutoff = compare.slow_cutoff(size1, size2,seqsize1, seqsize2)
             user_score = compare.adjust_score(score, size1, size2, seqsize1, seqsize2)
             if score < min_score or score > slow_cutoff:
@@ -97,7 +105,10 @@ class Fingerprint:
                 uniquewords.append(my_hash(word))
         #Array used to save space.  Array type is dependent on hash values though!
         #TODO: make this use the correct size on 32 bit systems
-        return array('l', uniquewords)
+        if Cfg.myOptions.useC:
+            return OptimizeCompare.HashSequence(uniquewords)
+        else:
+            return array('l', uniquewords)
     
 if __name__ == '__main__':
     import zUnitTest

@@ -10,6 +10,10 @@ either above the slow_cutoff, or below the min_score.
 from __future__ import division #needed so that integer/integer = float
 import Utility
 import math
+import Cfg
+if Cfg.myOptions.useC:
+    import OptimizeCompare
+   
 
 class CompareParams():
     '''Defines a set of comparison parameters to use.  Each parameter is a function, and returns a
@@ -18,8 +22,10 @@ class CompareParams():
                  min_score = None, 
                  slow_cutoff = None,
                  meaningful_length = None,
-                 allowed_errors = None,
+                 allowed_consecutive_errors = None,
+                 allowed_displacement_error = None,
                  adjust_score = None,
+                 count_misses = True,
                  search_method = None):
         '''Creates a set of parameters defining a comparison.
            
@@ -30,22 +36,24 @@ class CompareParams():
              re-compared with another search.  Given size1, size2, seqsize1, and seqsize2
              as parameters.  Returns 0.0 to 1.0
            * meaningful_length is a parameter passed to the search.  It is given size1, size2, 
-             seqsize1, seqsize2, and allowed_errors as parameters. Returns a small integer.
-           * allowed_errors is the number of sequential errors or other errors a search should
+             seqsize1, seqsize2, and allowed_consecutive_errors as parameters. Returns a small integer.
+           * allowed_consecutive_errors is the number of sequential errors or other errors a search should
              accept.  It is passed to the search method.  It is passed size1, size2, seqsize1,
              and seqsize2.  Returns a small integer.
            * adjust_score is the score reported to the user, scaled to a value consistent
              with the other comparisons.  It is given the calculated score, size1, size2,
              seqsize1, and seqsize2.
            * search_method compares two fingerprints, and computes a score.  It is given
-             sequence1, set1, sequence2, set2, meaningful_length, and allowed_errors.
+             sequence1, set1, sequence2, set2, meaningful_length, and allowed_consecutive_errors.
              Returns a score from 0.0 to 1.0
              '''  
         self.min_score = min_score 
         self.slow_cutoff = slow_cutoff
         self.meaningful_length = meaningful_length
-        self.allowed_errors = allowed_errors
+        self.allowed_consecutive_errors = allowed_consecutive_errors
+        self.allowed_displacement_error = allowed_displacement_error
         self.adjust_score = adjust_score 
+        self.count_misses = count_misses
         self.search_method = search_method 
         
         
@@ -61,10 +69,13 @@ def variable_min_score(size1,size2,seqsize1,seqsize2):
 def fixed_slow_cutoff(size1, size2, seqsize1, seqsize2):
     return 0.0
 
-def fixed_meaningful_length(size1, size2, seqsize1, seqsize2, allowed_errors):
-    return 3
+def fixed_meaningful_length(size1, size2, seqsize1, seqsize2, allowed_consecutive_errors):
+    return 6
 
-def fixed_allowed_errors(size1, size2, seqsize1, seqsize2):
+def fixed_allowed_consecutive_error(size1, size2, seqsize1, seqsize2):
+    return 9
+
+def fixed_allowed_distance_error(size1, size2, seqsize1, seqsize2):
     return 9
 
 def unchanged_score(score, size1, size2, seqsize1, seqsize2):
@@ -76,10 +87,10 @@ def fixed_min_score(size1, size2, seqsize1, seqsize2):
 def fixed_slow_cutoff(size1, size2, seqsize1, seqsize2):
     return 0.0
 
-def fixed_meaningful_length(size1, size2, seqsize1, seqsize2, allowed_errors):
+def fixed_meaningful_length(size1, size2, seqsize1, seqsize2, allowed_consecutive_errors):
     return 0
 
-def fixed_allowed_errors(size1, size2, seqsize1, seqsize2):
+def fixed_allowed_consecutive_errors(size1, size2, seqsize1, seqsize2):
     return 0
 
 def unchanged_score(score, size1, size2, seqsize1, seqsize2):
@@ -171,7 +182,7 @@ def tcs_custom(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_err
             totalscore = totalscore + currentscore
     return totalscore / bestpossible
 
-def tcs_redux(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_errors):
+def tcs_redux(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_consecutive_errors, allowed_distance_error, count_misses):
     if len(seq1) < len(seq2):
         shortseq = seq1
         longset = set2
@@ -182,24 +193,23 @@ def tcs_redux(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_erro
     bestpossible = len(shortseq)
     currentscore = 0
     errors_remain = -1
-    nextexpected = 0
+    nextexpected = -100
     initialmatch = longset.get(shortseq[0])
     if initialmatch:
         nextexpected = initialmatch
     for index1, word1 in enumerate(shortseq):
         index2 = longset.get(word1)
-        #print index1, index2
-        if index2 and (abs(index2 - nextexpected)) < allowed_errors:
+        if index2 and (abs(index2 - nextexpected)) < allowed_distance_error:
             #hit!
             currentscore += 1
             nextexpected = index2 + 1
-            errors_remain = allowed_errors
+            errors_remain = allowed_consecutive_errors
         else:
             if errors_remain > 0:
                 #pretend it's a hit and see where it gets us:
-                currentscore += 1
+                if count_misses:
+                    currentscore += 1
                 if index2:
-                    nextexpected += 1
                     nextexpected = index2 +1
                 else:
                     nextexpected += 1
@@ -207,8 +217,9 @@ def tcs_redux(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_erro
             else:
                 if 0 == errors_remain:
                     #We flubbed it; back up and try again!
-                    currentscore -= allowed_errors
-                    index1 -= allowed_errors
+                    if count_misses:
+                        currentscore -= allowed_consecutive_errors
+                    index1 -= allowed_consecutive_errors
                     errors_remain = -1
                     index2 = longset.get(shortseq[index1])
                     #print index2
@@ -217,7 +228,7 @@ def tcs_redux(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_erro
                 if index2: #this is a miss for our current count, but a hit somewhere!
                     nextexpected = index2+1
                     currentscore = 1
-                    errors_remain = allowed_errors
+                    errors_remain = allowed_consecutive_errors
                 else:
                     nextexpected = -100
                     currentscore = 0
@@ -253,13 +264,34 @@ def dl_compare(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_err
 gCompareParams = [CompareParams(min_score = fixed_min_score, 
                                 slow_cutoff = fixed_slow_cutoff,
                                 meaningful_length = fixed_meaningful_length,
-                                allowed_errors = fixed_allowed_errors,
+                                allowed_consecutive_errors = fixed_allowed_consecutive_errors,
                                 adjust_score = unchanged_score,
                                 search_method = count_small_misses_lcs),]'''
 
-gCompareParams = [CompareParams(min_score = variable_min_score, 
+def UseCSearch(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_consecutive_errors, allowed_distance_error, count_misses):
+    if len(seq1) < len(seq2):
+        shortseq = seq1
+        longset = set2
+    else:
+        shortseq = seq2
+        longset = set1
+    return OptimizeCompare.compare(shortseq, longset, meaningful_length, allowed_consecutive_errors, allowed_distance_error)
+
+if Cfg.myOptions.useC:
+    gCompareParams = [CompareParams(min_score = variable_min_score, 
                                 slow_cutoff = fixed_slow_cutoff,
                                 meaningful_length = fixed_meaningful_length,
-                                allowed_errors = fixed_allowed_errors,
+                                allowed_consecutive_errors = fixed_allowed_consecutive_error,
+                                allowed_displacement_error = fixed_allowed_consecutive_error,
                                 adjust_score = unchanged_score,
+                                count_misses = True,
+                                search_method = UseCSearch),]
+else:    
+    gCompareParams = [CompareParams(min_score = variable_min_score, 
+                                slow_cutoff = fixed_slow_cutoff,
+                                meaningful_length = fixed_meaningful_length,
+                                allowed_consecutive_errors = fixed_allowed_consecutive_error,
+                                allowed_displacement_error = fixed_allowed_consecutive_error,
+                                adjust_score = unchanged_score,
+                                count_misses = True,
                                 search_method = tcs_redux),]

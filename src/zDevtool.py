@@ -93,9 +93,9 @@ def update_git():
 if __name__ == '__main__':
     try:
         input = ''
-        compile_and_setup()
         while not 'q' == input.lower():
             print "Choose:"
+            print "C) Compile optimized C++ code"
             print "1) Run quick tests"
             print "2) Run quick and medium tests"
             print "3) Run quick, medium, and long tests"
@@ -103,7 +103,12 @@ if __name__ == '__main__':
             print "G) Run quick and medium tests, then update git"
             print "Q) Quit"
             input = raw_input()
+            input = input.lower()
 
+            if 'c' == input:
+                compile_and_setup()
+                print "Must restart devtool to use the compiled code; exiting now."
+                input = 'q'
             if '1' == input:
                 run_tests(True,False,False)
             elif '2' == input:
@@ -113,7 +118,7 @@ if __name__ == '__main__':
             elif '4' == input:
                 suites = zUnitTest.build_test_suites()
                 zUnitTest.run_suite(suites['big'], 'big', False)
-            elif 'g' == input.lower():
+            elif 'g' == input:
                 result = run_tests(True,True,False)
                 if result:
                     update_git()         
