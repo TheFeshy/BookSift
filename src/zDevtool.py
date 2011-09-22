@@ -8,6 +8,7 @@
 import zUnitTest
 import commands
 import os
+import cProfile
 
 class DevToolProblem(Exception):
     def __init__(self,msg):
@@ -50,6 +51,9 @@ def run_tests(short = True, medium=True, long=True):
     else:
         return False
 
+def do_integrated_test():
+    zUnitTest.run_suite(suites['big'], 'big', False)
+    
 def update_git():
     try:
         os.chdir('../')
@@ -99,8 +103,9 @@ if __name__ == '__main__':
             print "1) Run quick tests"
             print "2) Run quick and medium tests"
             print "3) Run quick, medium, and long tests"
-            print "4) Run integrated test"
+            print "4) Run integrated test, and generate a profile"
             print "G) Run quick and medium tests, then update git"
+            print "R) Read profile data"
             print "Q) Quit"
             input = raw_input()
             input = input.lower()
@@ -121,7 +126,14 @@ if __name__ == '__main__':
             elif 'g' == input:
                 result = run_tests(True,True,False)
                 if result:
-                    update_git()         
+                    update_git()   
+            elif 'r' == input:
+                import pstats
+                print '===== Individual time ====='
+                stats = pstats.Stats('profiledata') 
+                stats.strip_dirs().sort_stats('time').print_stats(15)
+                print '===== Cumulitive time ====='   
+                stats.sort_stats('cumulative').print_stats(15)  
         print 'Devtool completed.'
     except DevToolProblem as e:
         print "Encountered a problem.  The error was:"

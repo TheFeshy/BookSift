@@ -100,9 +100,9 @@ class Fingerprint:
             else:
                 isunique[word]=True
         #Next, make an in-order list of the hash of the unique words
-        for word in cleanbook:
-            if isunique[word]:
-                uniquewords.append(my_hash(word))
+        for word, unique in isunique.iteritems():
+            if unique:
+                uniquewords.append(hash(word))
         #Array used to save space.  Array type is dependent on hash values though!
         #TODO: make this use the correct size on 32 bit systems
         if Cfg.myOptions.useC:
