@@ -54,7 +54,7 @@ def fixed_min_score(size1, size2, seqsize1, seqsize2):
 
 def variable_min_score(size1,size2,seqsize1,seqsize2):
     maxatone = .5
-    minatzero = .3
+    minatzero = .4
     ratio = min(size1,size2)/max(size1,size2)
     return (ratio * ratio *(maxatone - minatzero)) + minatzero
 
@@ -91,11 +91,13 @@ class PerfCounters():
         self.hits = 0
         self.misses = 0
         self.quickcompares = 0
+        self.highest_miss = 0
     def reset_counters(self):
         self.fallback_compare.clear()
         self.hits = 0
         self.misses = 0
         self.quickcompares = 0
+        self.highest_miss = 0
 
 gPerfCounters = PerfCounters()
         
@@ -124,13 +126,15 @@ def tcs_custom(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_err
     currentscore = 0
     errors_remain = allowed_errors
     miss = int(len(seq1) *(1-min_score))
+    errors_reset = False #we haven't had our error quota hit yet
     for i1 in xrange(len(shortseq)):
         c1 = shortseq[i1]
         i2 = longset.get(c1)
-        if i2 and (i2 - nextexpected) <= allowed_errors: #"Match" found, close enough to where it was expected.
+        if i2 and abs((i2 - nextexpected)) <= allowed_errors: #"Match" found, close enough to where it was expected.
             currentscore += 1
             nextexpected += 1
             errors_remain = allowed_errors #Reset our error tally
+            errors_reset = True
         else: #"No Match" found
             if errors_remain: #We didn't match, but we are allowed not to still
                 if count_misses:
@@ -138,9 +142,15 @@ def tcs_custom(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_err
                 nextexpected += 1    
                 errors_remain -= 1       
             else: #We didn't match and have used up all our consecutive errors
-                nextexpected -= allowed_errors #Move back to where we had misses
-                i1 -= allowed_errors #Move back to where things started to go wrong and start again
-                currentscore -= allowed_errors #Don't count the erorrs we had so far getting here
+                if errors_reset:
+                    nextexpected -= allowed_errors #Move back to where we had misses
+                    i1 -= allowed_errors #Move back to where things started to go wrong and start again
+                    currentscore -= allowed_errors #Don't count the errors we had so far getting here    
+                    errors_reset = False
+                else:
+                    nextexpected -= 1
+                    i1 -= 1
+                c1 = shortseq[i1]
                 i2 = longset.get(c1) #Reset our "found" position to the position after our last match
                 miss -= 1 
                 if not miss and early_exit:
@@ -160,6 +170,62 @@ def tcs_custom(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_err
         if currentscore > meaningful_length:
             totalscore = totalscore + currentscore
     return totalscore / bestpossible
+
+def tcs_redux(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_errors):
+    if len(seq1) < len(seq2):
+        shortseq = seq1
+        longset = set2
+    else:
+        shortseq = seq2
+        longset = set1
+    totalscore = 0
+    bestpossible = len(shortseq)
+    currentscore = 0
+    errors_remain = -1
+    nextexpected = 0
+    initialmatch = longset.get(shortseq[0])
+    if initialmatch:
+        nextexpected = initialmatch
+    for index1, word1 in enumerate(shortseq):
+        index2 = longset.get(word1)
+        #print index1, index2
+        if index2 and (abs(index2 - nextexpected)) < allowed_errors:
+            #hit!
+            currentscore += 1
+            nextexpected = index2 + 1
+            errors_remain = allowed_errors
+        else:
+            if errors_remain > 0:
+                #pretend it's a hit and see where it gets us:
+                currentscore += 1
+                if index2:
+                    nextexpected += 1
+                    nextexpected = index2 +1
+                else:
+                    nextexpected += 1
+                errors_remain -= 1
+            else:
+                if 0 == errors_remain:
+                    #We flubbed it; back up and try again!
+                    currentscore -= allowed_errors
+                    index1 -= allowed_errors
+                    errors_remain = -1
+                    index2 = longset.get(shortseq[index1])
+                    #print index2
+                    if currentscore > meaningful_length:
+                        totalscore += currentscore
+                if index2: #this is a miss for our current count, but a hit somewhere!
+                    nextexpected = index2+1
+                    currentscore = 1
+                    errors_remain = allowed_errors
+                else:
+                    nextexpected = -100
+                    currentscore = 0
+    else:
+        if currentscore > meaningful_length:
+            totalscore += currentscore
+    return totalscore / bestpossible
+        
 
 def count_small_misses_lcs(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_errors):
     score = tcs_custom(seq1 ,set1, seq2, set2, min_score, meaningful_length, allowed_errors, True, False, False)
@@ -196,4 +262,4 @@ gCompareParams = [CompareParams(min_score = variable_min_score,
                                 meaningful_length = fixed_meaningful_length,
                                 allowed_errors = fixed_allowed_errors,
                                 adjust_score = unchanged_score,
-                                search_method = count_small_misses_tcs),]
+                                search_method = tcs_redux),]

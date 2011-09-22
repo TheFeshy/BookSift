@@ -99,6 +99,7 @@ if __name__ == '__main__':
             print "1) Run quick tests"
             print "2) Run quick and medium tests"
             print "3) Run quick, medium, and long tests"
+            print "4) Run integrated test"
             print "G) Run quick and medium tests, then update git"
             print "Q) Quit"
             input = raw_input()
@@ -109,6 +110,9 @@ if __name__ == '__main__':
                 run_tests(True,True,True)
             elif '3' == input:
                 run_tests(True,True,True)
+            elif '4' == input:
+                suites = zUnitTest.build_test_suites()
+                zUnitTest.run_suite(suites['big'], 'big', False)
             elif 'g' == input.lower():
                 result = run_tests(True,True,False)
                 if result:

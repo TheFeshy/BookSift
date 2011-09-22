@@ -7,6 +7,7 @@ from zipfile import ZipFile
 import os
 import re
 import Utility
+import Compare
 
 
 '''This class is used to make 'OCR-like' errors in text files, to make our testing more
@@ -356,6 +357,7 @@ class TestBookManager ():
         totalfalsehitscore = 0
         misslist = []
         fposlist = []
+        worsthit = 1.0
         for i in known:
             for j in found.iterkeys():
                 if i == j:
@@ -363,6 +365,8 @@ class TestBookManager ():
                     foundunique.remove(j)
                     hit += 1
                     totalhitscore += found[i]
+                    if found[i] < worsthit:
+                        worsthit = found[i]
                     break
         for a in ambiguous: #Don't count ambiguous relationships against our totals
             for j in found:
@@ -379,7 +383,7 @@ class TestBookManager ():
             misslist.append((name,i))
         misses = len(knownunique)
         fpos = len(foundunique)
-        return misses, fpos, hit, ambig, maxhits, totalhitscore, totalfalsehitscore, misslist, fposlist
+        return misses, fpos, hit, ambig, maxhits, totalhitscore, totalfalsehitscore, misslist, fposlist, worsthit
     def __get_bookresults_by_txtfile(self, book, library):
         relationships = book.get_relationships()
         txtrelationships = {}
@@ -392,9 +396,9 @@ class TestBookManager ():
                 
     def verify_results(self, library):
         self.__update_anthology_ambiguity()
-        results = {'duplicates':{'hits':0,'maxhits':0,'misses':0,'false positives':0, 'hitscore':0, 'falsehitscore':0,'misslist':[],'fpos':[]},
-                   'parents':{'hits':0,'maxhits':0,'misses':0,'ambiguous':0,'false positives':0, 'hitscore':0, 'falsehitscore':0,'misslist':[],'fpos':[]},
-                   'children':{'hits':0,'maxhits':0,'misses':0,'ambiguous':0,'false positives':0, 'hitscore':0, 'falsehitscore':0,'misslist':[],'fpos':[]},
+        results = {'duplicates':{'hits':0,'maxhits':0,'misses':0,'false positives':0, 'hitscore':0, 'falsehitscore':0,'misslist':[],'fpos':[],'lowesthitscore':1.0,'highetsnohitscore':0},
+                   'parents':{'hits':0,'maxhits':0,'misses':0,'ambiguous':0,'false positives':0, 'hitscore':0, 'falsehitscore':0,'misslist':[],'fpos':[],'lowesthitscore':1.0},
+                   'children':{'hits':0,'maxhits':0,'misses':0,'ambiguous':0,'false positives':0, 'hitscore':0, 'falsehitscore':0,'misslist':[],'fpos':[],'lowesthitscore':1.0},
                    'ambiguous':0}
         #Next, look at all our books and compare found relationships to known ones 
         for book in library.book_iter():
@@ -403,7 +407,7 @@ class TestBookManager ():
             kmatch = self.relationships[bookpath]['matches']
             kambig = self.relationships[bookpath]['ambiguous']
             fmatch = foundrelation['M']
-            miss, fpos, hit, ambig, max, hs, fhs,mlist,fplist = TestBookManager.__count_not_present_in_both(kmatch, fmatch, kambig, bookpath)
+            miss, fpos, hit, ambig, max, hs, fhs,mlist,fplist, worsthit = TestBookManager.__count_not_present_in_both(kmatch, fmatch, kambig, bookpath)
             results['duplicates']['misses'] += miss
             results['duplicates']['false positives'] += fpos
             results['duplicates']['hits'] += hit
@@ -415,9 +419,11 @@ class TestBookManager ():
                 results['duplicates']['misslist'].append(mlist)
             if fplist:
                 results['duplicates']['fpos'].append(fplist)
+            if worsthit < results['duplicates']['lowesthitscore']:
+                results['duplicates']['lowesthitscore'] = worsthit
             kmatch = self.relationships[bookpath]['parents']
             fmatch = foundrelation['B']
-            miss, fpos, hit, ambig, max, hs, fhs,mlist,fplist = TestBookManager.__count_not_present_in_both(kmatch, fmatch, kambig, bookpath)
+            miss, fpos, hit, ambig, max, hs, fhs,mlist,fplist, worsthit = TestBookManager.__count_not_present_in_both(kmatch, fmatch, kambig, bookpath)
             results['parents']['misses'] += miss
             results['parents']['false positives'] += fpos
             results['parents']['hits'] += hit
@@ -429,9 +435,11 @@ class TestBookManager ():
                 results['parents']['misslist'].append(mlist)
             if fplist:
                 results['parents']['fpos'].append(fplist)
+            if worsthit < results['parents']['lowesthitscore']:
+                results['parents']['lowesthitscore'] = worsthit
             kmatch = self.relationships[bookpath]['children']
             fmatch = foundrelation['P']
-            miss, fpos, hit, ambig, max, hs, fhs,mlist,fplist = TestBookManager.__count_not_present_in_both(kmatch, fmatch, kambig, bookpath)
+            miss, fpos, hit, ambig, max, hs, fhs,mlist,fplist, worsthit = TestBookManager.__count_not_present_in_both(kmatch, fmatch, kambig, bookpath)
             results['children']['misses'] += miss
             results['children']['false positives'] += fpos
             results['children']['hits'] += hit
@@ -443,6 +451,8 @@ class TestBookManager ():
                 results['children']['misslist'].append(mlist)
             if fplist:
                 results['children']['fpos'].append(fplist)
+            if worsthit < results['children']['lowesthitscore']:
+                results['children']['lowesthitscore'] = worsthit
         hs = results['duplicates']['hitscore']
         fhs = results['duplicates']['falsehitscore']
         if hs:
@@ -473,6 +483,8 @@ class TestBookManager ():
             results['children']['falsehitscore'] = fhs / results['children']['false positives']
         else:
             results['children']['falsehitscore'] = 0
+        results['duplicates']['highetsnohitscore'] = Compare.gPerfCounters.highest_miss
+        
         return results
     @staticmethod
     def combine_results(results):
@@ -491,6 +503,8 @@ class TestBookManager ():
         print 'Duplicate results:'
         print 'Hits: {0} out of {1} ({2:.1%})'.format(results['duplicates']['hits'], results['duplicates']['maxhits'], results['duplicates']['hits']/results['duplicates']['maxhits'])
         print 'Average hit score: {0:.1%}'.format(results['duplicates']['hitscore'])
+        print 'Worst hit score: {0:.1%}'.format(results['duplicates']['lowesthitscore'])
+        print 'Highest miss (false positive precursor): {0:.1%}'.format(results['duplicates']['highetsnohitscore'])
         print 'False positives: {0}'.format(results['duplicates']['false positives'])
         print 'Average false positive score: {0:.1%}'.format(results['duplicates']['falsehitscore'])
         print 'Misses:.......................................................'
@@ -502,6 +516,7 @@ class TestBookManager ():
             print 'Superset results:'
             print 'Hits: {0} out of {1} ({2:.1%})'.format(results['parents']['hits'], results['parents']['maxhits'], results['parents']['hits']/results['parents']['maxhits'])
             print 'Average hit score: {0:.1%}'.format(results['parents']['hitscore'])
+            print 'Worst hit score: {0:.1%}'.format(results['parents']['lowesthitscore'])
             print 'False positives: {0}'.format(results['parents']['false positives'])
             print 'Average false positive score: {0:.1%}'.format(results['parents']['falsehitscore'])
             print 'Misses:.......................................................'
@@ -512,6 +527,7 @@ class TestBookManager ():
             print 'Subset results:'
             print 'Hits: {0} out of {1} ({2:.1%})'.format(results['children']['hits'], results['children']['maxhits'], results['children']['hits']/results['children']['maxhits'])
             print 'Average hit score: {0:.1%}'.format(results['children']['hitscore'])
+            print 'Worst hit score: {0:.1%}'.format(results['children']['lowesthitscore'])
             print 'False positives: {0}'.format(results['children']['false positives'])
             print 'Average false positive score: {0:.1%}'.format(results['children']['falsehitscore'])
             print 'Misses:.......................................................'

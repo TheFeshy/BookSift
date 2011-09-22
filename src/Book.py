@@ -106,6 +106,10 @@ class Book:
         elif result[0] == 'B':
             self.__subsetof[book2.id]=result[1]
             book2.__supersetof[self.id]=result[1]
+        elif result[0] == 'N':
+            antiscore = 1 - result[1]
+            if antiscore > Compare.gPerfCounters.highest_miss:
+                Compare.gPerfCounters.highest_miss = antiscore
         return result
 
 if __name__ == '__main__':

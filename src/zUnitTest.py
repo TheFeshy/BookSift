@@ -4,7 +4,8 @@
    
    test_short_*  a test with this name should expect to complete in a fraction of a second
    test_medium_* a test with this name should complete within, at most, a few seconds
-   test_long_*   a test with this name could take several seconds to complete'''
+   test_long_*   a test with this name could take several seconds to complete
+   test_big_*    for right now, our big "test 50 books" test'''
 
 import unittest
 import time
@@ -113,8 +114,7 @@ class BookTest(unittest.TestCase):
         Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
         verification = self.testdata.verify_results(library)
         self.assertAlmostEqual(1.0, zTestDataManager.TestBookManager.combine_results(verification),3)
-
-    '''
+'''
     def test_quicknomatch(self):#make certain books that aren't even close miss quickly
         curtime = time.time()
         self.books['book0o'].compare_with(self.books['book1e'])
@@ -257,16 +257,12 @@ class ControllerTest(unittest.TestCase):
     def test_long_basictest(self): #Just run through some books to be sure we don't crash
         library = Library.Library()
         Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
-        self.assertTrue(library.get_book_count() > 0)  
-            
-class CompleteRunthroughTest(unittest.TestCase):
-    def setUp(self):
+        self.assertTrue(library.get_book_count() > 0) 
+    def test_big_compelete(self):
         print 'Setting up book test archive (this might take some time)'
         self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
         self.testdata.make_testcase(final_number=50)
-        print 'Test case generated.'
-    def test_long_compelete(self):
-        print 'Beginning book matching'
+        print 'Test case generated. Beginning book matching'
         library = Library.Library()
         start = time.time()
         Controller.process_books(library, book_text_files=self.testdata.get_testbooks())
@@ -276,12 +272,12 @@ class CompleteRunthroughTest(unittest.TestCase):
         verification = self.testdata.verify_results(library)
         self.testdata.print_formatted_results(verification)
         print 'Total Score: {0:.1%}'.format(zTestDataManager.TestBookManager.combine_results(verification))
-        self.assertTrue(True)
+        self.assertTrue(True) 
 
 def build_test_suites():
     myTestSuites = {}
     test_cases = [FingerprintTest, BookTest, LibraryTest, UtilityTest,ControllerTest]
-    test_types = ['short', 'medium', 'long']
+    test_types = ['short', 'medium', 'long', 'big']
     for type in test_types:
         suite = unittest.TestSuite()
         for case in test_cases:
