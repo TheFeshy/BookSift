@@ -77,7 +77,7 @@ class Fingerprint:
         if min_score < score:
             Compare.gPerfCounters.hits += 1
             #We have a book that matches, let's see what the relationship is:
-            if (min(size1,size2)/max(size1,size2)) > 0.85:
+            if (min(size1,size2)/max(size1,size2)) > 0.9:
                 return 'M', user_score
             elif self.__booklength > fp2.__booklength:
                 return 'P',user_score

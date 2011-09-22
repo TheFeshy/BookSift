@@ -163,6 +163,7 @@ class TestBookManager ():
         self.unpacked = False
         self.antcount = 0
         self.usedflags = {}
+        self.unmodifiedfiles = []
     def __del__(self):
         #TODO: clean up our books when we're done playing with them.
         pass
@@ -213,6 +214,7 @@ class TestBookManager ():
                 inbook = archive.open(archivedbook)
                 of.write(inbook.read())
                 self.relationships[ofname] = {'matches':set(),'parents':set(),'children':set(), 'ambiguous':set()}
+                self.unmodifiedfiles.append(ofname)
         self.unpacked = True #We only want to unpack once
     
     def make_error_dupes(self,filelist = [], number = 0, errormaker = None):
@@ -223,7 +225,7 @@ class TestBookManager ():
             if not number > 0:
                 print "oops, didn't make any dupes"
                 return #We have nothing else to do
-            filelist = random.sample(self.relationships, number)
+            filelist = random.sample(self.unmodifiedfiles, number)
         for file in filelist:
             if errormaker:
                 flag = 'e'
@@ -287,13 +289,13 @@ class TestBookManager ():
         included = set()
         while number_to_include and oops:
             oops += -1
-            number_to_include += -1
             book = random.choice(self.relationships.keys())
             if not self.__check_already_anthologized(included, book):
                 with open(book, 'r') as inf:
                     text.append(inf.read())
                 included = included| self.relationships[book]['matches']
                 included.add(book)
+                number_to_include += -1
                 self.relationships[book]['parents'].add(antname)
                 for sib in self.relationships[book]['matches']:
                     self.relationships[sib]['parents'].add(antname)
