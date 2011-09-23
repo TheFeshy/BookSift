@@ -5,6 +5,7 @@ class Library():
     def __init__(self):
         self.__books_by_uuid = {}
         self.__uuid_by_calibre_id = {}
+        self.__minhashtables = {} #type of tablenumber: dict{hashvalue, bookUUID}
     def add_book(self, book):
         self.__books_by_uuid[book.id]=book
         if book.calibreid:
@@ -18,6 +19,22 @@ class Library():
             if textfile == book.get_textfilepath():
                 return book
         return None
+    def get_possible_matches(self, book, threshold):
+        hits = {}
+        for i in self.__minhashtables.keys():
+            table = book.get_minhashes()
+            thishash = table[i]
+            for hit in self.__minhashtables[i][thishash]:
+                if not hit in hits:
+                    hits[hit] = 1
+                else:
+                    hits[hit] +=1
+        possibilities = []
+        for hit,score in hits.iteritems():
+            if score > threshold:
+                possibilities.append((hit,score))
+        return possibilities
+            
     def get_book_count(self):
         return len(self.__books_by_uuid)
     def book_iter(self):
@@ -36,9 +53,15 @@ class Library():
                         
         else:
             pass #declare "success" - after all, the book is no longer here, right?
-    def update_book_uid(self,*args):
-        for id in args:
-            pass #hopefully this won't be needed to ensure consistency
+        #TODO: remove from hash lookup!
+    def update_book_uid(self, uid):
+        minhashes = self.get_book_uid(uid).get_minhashes()
+        for i,h in minhashes.iteritems():
+            if not i in self.__minhashtables.keys():
+                self.__minhashtables[i] = {}
+            if not h in self.__minhashtables[i].keys():
+                self.__minhashtables[i][h] = []
+            self.__minhashtables[i][h].append(uid)
     def print_pretty_tree(self):
         class Node():
             def __init__(self):

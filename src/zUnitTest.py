@@ -269,7 +269,7 @@ class ControllerTest(unittest.TestCase):
     def test_big_compelete(self):
         print 'Setting up book test archive (this might take some time)'
         self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
-        self.testdata.make_testcase(final_number=75)
+        self.testdata.make_testcase(final_number=50)
         import cProfile
         cProfile.runctx('self.profilethis()', globals(), locals(), 'profiledata')
         verification = self.testdata.verify_results(self.library)

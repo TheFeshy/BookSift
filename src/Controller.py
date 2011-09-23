@@ -23,7 +23,7 @@ def fingerprint_initializer(library, bookids):
     for id in bookids:
         book = library.get_book_uid(id)
         book.initialize_text_data()
-        library.update_book_uid(book.id)
+        library.update_book_uid(id)
         #TODO: put in "exit command" code
 
 def book_compare_helper(bookid1, bookid2, args, kwargs):
@@ -32,8 +32,8 @@ def book_compare_helper(bookid1, bookid2, args, kwargs):
     book2 = library.get_book_uid(bookid2)
     try:
         result = book1.compare_with(book2)
-        if not 'N' == result[0]:
-            library.update_book_uid((book1.id, book2.id))
+        #if not 'N' == result[0]:
+            #library.update_book_uid((book1.id, book2.id))
     except (NotInitialized):
         return 'S' #If we hit an unitialized book, work on something else until it's ready
 

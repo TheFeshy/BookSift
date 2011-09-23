@@ -13,10 +13,12 @@ import Compare
 import Cfg
 if Cfg.myOptions.useC:
     import OptimizeCompare
+import Utility
 
 class Fingerprint:
     '''Takes the contents of a book (in text form) to initialize'''
     def __init__(self, book, hash_function=hash):
+        self.__minhashes = {}
         #Get all unique words in the document
         self.__importantwords = self.__get_unique_words(book, hash_function)
         if not len(self.__importantwords):
@@ -31,6 +33,8 @@ class Fingerprint:
             self.__importantset[c] = i
         self.__booklength = len(book)
         self.hashcheck = hash_function('magicvalue')
+    def get_minhash(self):
+        return self.__minhashes
     
     '''This function has the look of one pulled out of thin air... it pretty much was. '''  
     def __get_minscore_from_ratio(self, ratio):
@@ -87,8 +91,7 @@ class Fingerprint:
             Compare.gPerfCounters.misses += 1
             return 'N',1.0-user_score
     '''Creates an array consisting of the hashes of the unique words within the book'''
-    @staticmethod
-    def __get_unique_words(book, my_hash):
+    def __get_unique_words(self, book, my_hash):
         isunique = {}
         uniquewords = []
         #Create a case-insensitive list, removing all numbers and punctuation
@@ -100,15 +103,39 @@ class Fingerprint:
             else:
                 isunique[word]=True
         #Next, make an in-order list of the hash of the unique words
-        for word, unique in isunique.iteritems():
-            if unique:
-                uniquewords.append(hash(word))
+        #for word, unique in isunique.iteritems():
+        for word in cleanbook:
+            if isunique[word]:
+                uniquewords.append(my_hash(word))
+        self.__minhashes = self.__generate_minhashes(cleanbook)
         #Array used to save space.  Array type is dependent on hash values though!
         #TODO: make this use the correct size on 32 bit systems
         if Cfg.myOptions.useC:
             return OptimizeCompare.HashSequence(uniquewords)
         else:
             return array('l', uniquewords)
+
+    def __shingle_and_hash(self, words, shingle_size, minhashes, L_tables):
+        for i in xrange(len(words) - shingle_size):
+            shingle = ''.join(words[i:i+shingle_size])
+            hshingle = hash(shingle)
+            for h in xrange(L_tables):
+                #tables[h].append(hshingle ^ Utility.myMasks.masks[h])
+                myhash = hshingle ^ Utility.myMasks.masks[h]
+                if myhash < minhashes[h]:
+                    minhashes[h] = myhash
+        
+    def __generate_minhashes(self,words, shingle_size=5,L_tables=10):
+        minhashes = {n:9223372036854775807 for n in xrange(L_tables)}
+        if len(words) < shingle_size:
+            shingle_size = 1
+        self.__shingle_and_hash(words, shingle_size, minhashes, L_tables)
+        #self.__find_mins(tables, L_tables, minhashes)
+        return minhashes
+                    
+        
+        
+        
     
 if __name__ == '__main__':
     import zUnitTest

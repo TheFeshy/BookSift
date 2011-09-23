@@ -85,3 +85,14 @@ def hash_function(n):
     return hash(x) ^ mask
   return myhash
 '''
+                
+class MaskList():
+    def __init__(self, max_masks):
+        self.masks = {}
+        import random
+        #random.seed(12345) #The same as the combination to my luggage!
+        for mask in xrange(0,max_masks):
+            #self.masks[mask] = random.getrandbits(64)
+            self.masks[mask] = 1
+            
+myMasks = MaskList(100)

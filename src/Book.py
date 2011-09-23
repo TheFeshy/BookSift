@@ -58,6 +58,9 @@ class Book:
             if scanid in book.__previous_completed_scans:
                 return True
         return False
+    def get_minhashes(self):
+        return self.__fingerprint.get_minhash()
+    
     def initialize_text_data(self, hash_function=hash):
         if not self.__skip:
             if not self.__fingerprint:
