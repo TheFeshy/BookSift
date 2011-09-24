@@ -58,8 +58,16 @@ class Book:
             if scanid in book.__previous_completed_scans:
                 return True
         return False
+    def is_comparable(self):
+        if self.__fingerprint and not self.__skip:
+            return True
+        else:
+            return False
     def get_minhashes(self):
-        return self.__fingerprint.get_minhash()
+        if not self.__fingerprint:
+            raise NotInitialized('Attempted to find minhashes on a book that has not been initialized')
+        else:
+            return self.__fingerprint.get_minhash()
     
     def initialize_text_data(self, hash_function=hash):
         if not self.__skip:

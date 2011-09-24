@@ -92,7 +92,6 @@ class MaskList():
         import random
         #random.seed(12345) #The same as the combination to my luggage!
         for mask in xrange(0,max_masks):
-            #self.masks[mask] = random.getrandbits(64)
-            self.masks[mask] = 1
+            self.masks[mask] = random.getrandbits(64)
             
 myMasks = MaskList(100)

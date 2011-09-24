@@ -75,6 +75,7 @@ class BookTest(unittest.TestCase):
     def tearDown(self):
         #TODO: this
         pass
+    #TODO: check that "skipped" books don't throw errors when compared, and that they are skipped
     def test_short_failstoreadnonexistantfile(self): #make sure we raise the proper exception if a file doesn't exist or can't be read
         book = Book(textfile='invalidfile.txt')
         self.assertRaises(CantGetText, book.initialize_text_data,hash)
@@ -249,6 +250,55 @@ class LibraryTest(unittest.TestCase):
         self.assertFalse(library.get_book_uid(book.id).statusmsg)
         book.statusmsg = True
         self.assertTrue(library.get_book_uid(book.id).statusmsg)
+    def test_short_minhashuninitializedbooks(self): #make certain we raise an error
+        book1 = Book(textfile='invalidfile1.txt')
+        book2 = Book(textfile='invalidfile2.txt')
+        library = Library.Library()
+        library.add_book(book1)
+        library.add_book(book2)
+        self.assertRaises(NotInitialized, library.get_possible_matches, book1)
+    def test_medium_minhashfindsmatches(self): #make certain minhash actually...works.
+        testmgr = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
+        testmgr.unpack_archive(max=2)
+        testbook = testmgr.get_testbooks()[0]
+        e = zTestDataManager.ErrorMaker()
+        dupe = testmgr.make_error_dupes([testbook,], errormaker=e)[0]
+        books = testmgr.get_testbooks()
+        library = Library.Library()
+        for book in books:
+            mybook = Book(textfile=book)
+            mybook.initialize_text_data()
+            library.add_book(mybook)
+        dupe = library.get_book_textfile(dupe)
+        testablebook = library.get_book_textfile(testbook)
+        possiblematches = library.get_possible_matches(testablebook)
+        found = False
+        for id, score in possiblematches:
+            if id == dupe.id:
+                found=True
+        self.assertTrue(found)
+    def test_medium_minhashexcludes(self): #Minhash must exclude at least some misses!
+        testmgr = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
+        testmgr.unpack_archive(max=4)
+        testbook = testmgr.get_testbooks()[0]
+        e = zTestDataManager.ErrorMaker()
+        dupe = testmgr.make_error_dupes([testbook,], errormaker=e)[0]
+        books = testmgr.get_testbooks()
+        library = Library.Library()
+        for book in books:
+            mybook = Book(textfile=book)
+            mybook.initialize_text_data()
+            library.add_book(mybook)
+        dupe = library.get_book_textfile(dupe)
+        testablebook = library.get_book_textfile(testbook)
+        possiblematches = library.get_possible_matches(testablebook)
+        self.assertLess(len(possiblematches), 5, msg="minhash was not able to eliminate at least one possible book")
+        self.assertGreaterEqual(len(possiblematches), 1, msg="minhash didn't get at least one hit")
+        minverification = testmgr.verify_minhash_results(library)
+        testmgr.print_formatted_minhash_results(minverification)
+        
+        
+        
 
 class ControllerTest(unittest.TestCase):
     def setUp(self):
@@ -275,6 +325,8 @@ class ControllerTest(unittest.TestCase):
         verification = self.testdata.verify_results(self.library)
         self.testdata.print_formatted_results(verification)
         print 'Total Score: {0:.1%}'.format(zTestDataManager.TestBookManager.combine_results(verification))
+        minverification = self.testdata.verify_minhash_results(self.library)
+        self.testdata.print_formatted_minhash_results(minverification)
         self.assertTrue(True) 
 
 def build_test_suites():

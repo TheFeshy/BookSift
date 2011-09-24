@@ -18,7 +18,7 @@ import Utility
 class Fingerprint:
     '''Takes the contents of a book (in text form) to initialize'''
     def __init__(self, book, hash_function=hash):
-        self.__minhashes = {}
+        self.__minhashes = None
         #Get all unique words in the document
         self.__importantwords = self.__get_unique_words(book, hash_function)
         if not len(self.__importantwords):
@@ -34,7 +34,10 @@ class Fingerprint:
         self.__booklength = len(book)
         self.hashcheck = hash_function('magicvalue')
     def get_minhash(self):
-        return self.__minhashes
+        if not self.__minhashes:
+            raise NotInitialized('Attempting to compare fingerprints from an uninitialized book')
+        else:
+            return self.__minhashes
     
     '''This function has the look of one pulled out of thin air... it pretty much was. '''  
     def __get_minscore_from_ratio(self, ratio):
@@ -125,7 +128,8 @@ class Fingerprint:
                 if myhash < minhashes[h]:
                     minhashes[h] = myhash
         
-    def __generate_minhashes(self,words, shingle_size=5,L_tables=10):
+    def __generate_minhashes(self,words, shingle_size=5):
+        L_tables = Compare.myMinHashParams.minhash_tables
         minhashes = {n:9223372036854775807 for n in xrange(L_tables)}
         if len(words) < shingle_size:
             shingle_size = 1

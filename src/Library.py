@@ -1,6 +1,8 @@
 '''The library is the program's store of Book objects.  It takes care
    of managing them and serializing/deserializing them.'''
 
+import Compare
+
 class Library():
     def __init__(self):
         self.__books_by_uuid = {}
@@ -10,6 +12,7 @@ class Library():
         self.__books_by_uuid[book.id]=book
         if book.calibreid:
             self.__uuid_by_calibre_id[book.calibreid] = book.id
+        self.update_book_uid(book.id)
     def get_book_uid(self, id):
         return self.__books_by_uuid.get(id)
     def get_book_cid(self, id):
@@ -19,10 +22,10 @@ class Library():
             if textfile == book.get_textfilepath():
                 return book
         return None
-    def get_possible_matches(self, book, threshold):
+    def get_possible_matches(self, book):
         hits = {}
+        table = book.get_minhashes()
         for i in self.__minhashtables.keys():
-            table = book.get_minhashes()
             thishash = table[i]
             for hit in self.__minhashtables[i][thishash]:
                 if not hit in hits:
@@ -30,6 +33,7 @@ class Library():
                 else:
                     hits[hit] +=1
         possibilities = []
+        threshold = Compare.myMinHashParams.minhash_threshold
         for hit,score in hits.iteritems():
             if score > threshold:
                 possibilities.append((hit,score))
@@ -38,8 +42,6 @@ class Library():
     def get_book_count(self):
         return len(self.__books_by_uuid)
     def book_iter(self):
-        #This can probably be invalidated if books are added during use; only use it after
-        #all books are added to the library
         for book in self.__books_by_uuid.itervalues():
             yield book
     def delete_book_uid(self,id):
@@ -55,13 +57,15 @@ class Library():
             pass #declare "success" - after all, the book is no longer here, right?
         #TODO: remove from hash lookup!
     def update_book_uid(self, uid):
-        minhashes = self.get_book_uid(uid).get_minhashes()
-        for i,h in minhashes.iteritems():
-            if not i in self.__minhashtables.keys():
-                self.__minhashtables[i] = {}
-            if not h in self.__minhashtables[i].keys():
-                self.__minhashtables[i][h] = []
-            self.__minhashtables[i][h].append(uid)
+        book = self.get_book_uid(uid)
+        if book.is_comparable():
+            minhashes = book.get_minhashes()
+            for i,h in minhashes.iteritems():
+                if not i in self.__minhashtables.keys():
+                    self.__minhashtables[i] = {}
+                if not h in self.__minhashtables[i].keys():
+                    self.__minhashtables[i][h] = []
+                self.__minhashtables[i][h].append(uid)
     def print_pretty_tree(self):
         class Node():
             def __init__(self):

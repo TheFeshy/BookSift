@@ -226,12 +226,14 @@ class TestBookManager ():
                 print "oops, didn't make any dupes"
                 return #We have nothing else to do
             filelist = random.sample(self.unmodifiedfiles, number)
+        dupesmade = []
         for file in filelist:
             if errormaker:
                 flag = 'e'
             else:
                 flag = 'd'
             dupename = self.__mangle_filename(file, flag)
+            dupesmade.append(dupename)
             self.relationships[dupename] = self.relationships[file] #add all of a dupe's sibs, children, and parents
             self.relationships[dupename]['matches'].add(file)
             self.relationships[file]['matches'].add(dupename)
@@ -246,6 +248,7 @@ class TestBookManager ():
                     if errormaker:
                         text = errormaker.IntroduceErrors(text)
                     otf.write(text)
+        return dupesmade
     
     def make_duplicate(self, filelist = [], number = 0):
         # Just a handy alias for making dupes without errors
@@ -363,7 +366,7 @@ class TestBookManager ():
         totalfalsehitscore = 0
         misslist = []
         fposlist = []
-        worsthit = 1.0
+        worsthit = 10.0
         for i in known:
             for j in found.iterkeys():
                 if i == j:
@@ -382,9 +385,11 @@ class TestBookManager ():
                     except:
                         pass
                     ambig += 1
-        if name in knownunique: #Don't count missing "ourselves" against us
+        while name in knownunique: #Don't count missing "ourselves" against us
             knownunique.remove(name)
             maxhits -= 1
+        while name in foundunique:
+            foundunique.remove(name)
         for i in foundunique:
             totalfalsehitscore += found[i]
             fposlist.append((name,i,found[i]))
@@ -402,7 +407,39 @@ class TestBookManager ():
                 matchname = library.get_book_uid(match).get_textfilepath()
                 txtrelationships[hittype][matchname]=relationships[hittype][match]
         return txtrelationships
-                
+     
+    def verify_minhash_results(self, library):
+        self.__update_anthology_ambiguity()
+        results = {'hit':0,'maxhit':0,'hitscore':0,'worsthit':100,'false positive':0,'fpscore':0,'fplist':[], 'miss':0,'misslist':[]}
+        for book in library.book_iter():
+            bookpath = book.get_textfilepath()
+            kambig = self.relationships[bookpath]['ambiguous']
+            minhashscore = library.get_possible_matches(book)
+            kall = self.relationships[bookpath]['matches'] | self.relationships[bookpath]['parents'] | self.relationships[bookpath]['children']
+            fall = {}
+            for k,v in minhashscore: #make this a dict to be compatible with the results returned from other searches
+                k = library.get_book_uid(k).get_textfilepath()
+                fall[k] = v
+            miss, fpos, hit, ambig, max, hs, fhs,mlist,fplist, worsthit = TestBookManager.__count_not_present_in_both(kall, fall, kambig, bookpath)
+            results['hit'] += hit
+            results['maxhit'] += max
+            results['false positive'] += fpos
+            results['hitscore'] += hs
+            results['fpscore'] += fhs
+            if fplist:
+                results['fplist'].append(fplist)
+            results['miss'] += miss
+            if mlist:
+                results['misslist'].append(mlist)
+            if results['worsthit'] > worsthit:
+                results['worsthit'] = worsthit
+        if results['hit']:
+            results['hitscore']=results['hitscore']/results['hit']
+        if results['false positive']:
+            results['fpscore']=results['fpscore']/results['false positive']
+        return results
+            
+               
     def verify_results(self, library):
         self.__update_anthology_ambiguity()
         results = {'duplicates':{'hits':0,'maxhits':0,'misses':0,'false positives':0, 'hitscore':0, 'falsehitscore':0,'misslist':[],'fpos':[],'lowesthitscore':1.0,'highetsnohitscore':0},
@@ -495,6 +532,11 @@ class TestBookManager ():
         results['duplicates']['highetsnohitscore'] = Compare.gPerfCounters.highest_miss
         
         return results
+    def totalcompares(self, number):
+        retval = 0
+        for i in xrange(number -1):
+            retval += i
+        return retval
     @staticmethod
     def combine_results(results):
         totalpossible = results['duplicates']['maxhits'] + results['parents']['maxhits'] + results['children']['maxhits']
@@ -544,6 +586,18 @@ class TestBookManager ():
             print 'False Positives:..............................................'
             print ''.join(map(lambda x:'{0} falsely matched {1} with score {2:.1%}\n'.format(x[0][0],x[0][1], x[0][2]), results['children']['fpos']))
             print '=============================================================='
+    def print_formatted_minhash_results(self, results):
+        print '=============================================================='
+        print 'Minhash results:'
+        print 'Hits: {0} out of {1} {2:.1%}'.format(results['hit'], results['maxhit'], results['hit']/results['maxhit'])
+        print 'Average hit score: {0}'.format(results['hitscore'])
+        print 'Worst hit score: {0}'.format(results['worsthit'])
+        print 'False Positives: {0}'.format(results['false positive'])
+        print 'Average false positive score: {0}'.format(results['fpscore'])
+        print 'Comparisons required: {0}, Comparisons saved: {1}'.format(results['hit']+results['false positive'],self.totalcompares(len(self.relationships) - results['hit']+results['false positive']))
+        print 'Misses: {0} ..................................................'.format(results['miss'])
+        print ''.join(map(lambda x:'{0} not matched to {1}\n'.format(x[0][0],x[0][1]),results['misslist']))
+        print '=============================================================='
             
             
 
