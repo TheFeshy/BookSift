@@ -94,13 +94,13 @@ class MaskList():
         if Cfg.myOptions.useC:
             import OptimizeCompare
         random.seed(12345)
+        size = 99
         if Cfg.myOptions.useC:
             self.masks = OptimizeCompare.HashSequence()
-            for n in xrange(100):
+            for n in xrange(size):
                 self.masks.append(random.randint(-9223372036854775808,9223372036854775807))
         else:
-            self.masks = array('l',(random.randint(-9223372036854775808,9223372036854775807) for n in xrange(50)))
-        import random
+            self.masks = array('l',(random.randint(-9223372036854775808,9223372036854775807) for n in xrange(size)))
         #random.seed(12345) #The same as the combination to my luggage!
         #for mask in xrange(50):
         #    self.masks.extend(random.getrandbits(64))

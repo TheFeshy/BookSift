@@ -124,18 +124,16 @@ class Fingerprint:
             for i in xrange(len(words) - shingle_size):
                 shingle = tuple(words[i:i+shingle_size])
                 hshingle = hash(shingle)
-                for h in xrange(L_tables):
+                for h in xrange(L_tables-1):
                     myhash = hshingle ^ Utility.myMasks.masks[h]
                     if myhash < minhashes[h]:
                         minhashes[h] = myhash
         else:
-            shingles = len(words)- shingle_size
+            hashedwords = len(words)
             hashes = OptimizeCompare.HashSequence()
-            hashes.resize(shingles, 0)
-            for i in xrange(shingles):
-                #hashes.append(hash(tuple(words[i:i+shingle_size])))
-                #print i, len(hashes), shingles
-                hashes[i] = hash(tuple(words[i:i+shingle_size]))
+            hashes.resize(hashedwords, 0)
+            for i in xrange(hashedwords):
+                hashes[i] = hash(words[i])
             myhashes = OptimizeCompare.HashSequence()
             myhashes = OptimizeCompare.shingle_and_hash(hashes, Utility.myMasks.masks, L_tables, shingle_size)
             minhashes = array('l',myhashes) #Convert to native python type because this array is small, but will be accessed frequently!
