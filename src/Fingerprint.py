@@ -118,23 +118,38 @@ class Fingerprint:
         else:
             return array('l', uniquewords)
 
-    def __shingle_and_hash(self, words, shingle_size, minhashes, L_tables):
-        for i in xrange(len(words) - shingle_size):
-            shingle = tuple(words[i:i+shingle_size])
-            hshingle = hash(shingle)
-            for h in xrange(L_tables):
-                myhash = hshingle ^ Utility.myMasks.masks[h]
-                if myhash < minhashes[h]:
-                    minhashes[h] = myhash
-        
+    def __shingle_and_hash(self, words, shingle_size, L_tables):
+        if not Cfg.myOptions.useC:
+            minhashes = array('l', (9223372036854775807 for n in xrange(L_tables)))
+            for i in xrange(len(words) - shingle_size):
+                shingle = tuple(words[i:i+shingle_size])
+                hshingle = hash(shingle)
+                for h in xrange(L_tables):
+                    myhash = hshingle ^ Utility.myMasks.masks[h]
+                    if myhash < minhashes[h]:
+                        minhashes[h] = myhash
+        else:
+            shingles = len(words)- shingle_size
+            hashes = OptimizeCompare.HashSequence()
+            hashes.resize(shingles, 0)
+            for i in xrange(shingles):
+                #hashes.append(hash(tuple(words[i:i+shingle_size])))
+                #print i, len(hashes), shingles
+                hashes[i] = hash(tuple(words[i:i+shingle_size]))
+            myhashes = OptimizeCompare.HashSequence()
+            myhashes = OptimizeCompare.shingle_and_hash(hashes, Utility.myMasks.masks, L_tables, shingle_size)
+            minhashes = array('l',myhashes) #Convert to native python type because this array is small, but will be accessed frequently!
+        return minhashes
+                
+            
     def __generate_minhashes(self,words, shingle_size=5):
         L_tables = Compare.myMinHashParams.minhash_tables
-        minhashes = array('l', (9223372036854775807 for n in xrange(L_tables)))
-        if len(words) < shingle_size:
+        if len(words) < 4:
+            return array('l',[])
+        elif len(words) < shingle_size:
             shingle_size = 1
-        self.__shingle_and_hash(words, shingle_size, minhashes, L_tables)
+        return self.__shingle_and_hash(words, shingle_size, L_tables)
         #self.__find_mins(tables, L_tables, minhashes)
-        return minhashes
                     
         
         

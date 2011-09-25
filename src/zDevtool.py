@@ -79,6 +79,7 @@ def update_git():
             else:
                 print output
         if 'y' == choice.lower():
+            print "** Remember to check github issues! **"
             msg = raw_input('Enter commit message')
             status, output = commands.getstatusoutput('git commit -m "{0}"'.format(msg))
             print output

@@ -6,7 +6,8 @@
 #include <fstream>
 
 bool moduleworking()
-{	return true;
+{	std::cout << "Test" << std::endl;
+	return true;
 }
 
 float compare(HashSequence &hs, HashLookupTable &hl, const int meaningful_length, const int allowed_consecutive_errors, const int allowed_distance_errors)
@@ -67,3 +68,43 @@ float compare(HashSequence &hs, HashLookupTable &hl, const int meaningful_length
 	return float(totalscore)/float(bestpossible);
 }
 
+//This does the same thing as python's tupple hash - on 64 bit platforms only!
+long long mash_shingles(const HashSequence::iterator s, const int shingle_size)
+{	long long value = 0x345678;
+	long long mul = 1000003;
+	long long len = shingle_size;	
+	HashSequence::iterator e = s + shingle_size;
+	for(HashSequence::iterator i = s; i != e; i++)
+	{	value = mul * (value ^ *i);
+		--len;
+		mul += (82520 + (len << 1));
+	}
+	value += 97531;
+	if(value == -1)
+	{	value = -2;
+	}
+	return value;
+}
+
+//It is assumed that hash_family size is at least as large as L_table size, but no checks are done!
+HashSequence shingle_and_hash(HashSequence& word_hashes, 
+						HashSequence& hash_family, 
+						const int L_table_size, 
+						const int shingle_size)
+{	HashSequence minhashes(L_table_size, 9223372036854775807);
+	if(word_hashes.size() < 2)
+	{	std::cout << "This should be impossible." << std::endl;//TODO: raise an error or something.
+	}
+	HashSequence::iterator stop = word_hashes.end() - shingle_size;
+	for(HashSequence::iterator i = word_hashes.begin(); i != stop; i++)
+	{	long long hshingle = mash_shingles(i, shingle_size);
+		//std::cout << count++ << " of " << word_hashes.size() << std::endl;
+		for(unsigned int h = 0; h < hash_family.size(); h++)
+		{	long long myhash = hshingle ^ hash_family[h];
+			if(minhashes[h] > myhash)
+			{	minhashes[h] = myhash;
+			}
+		}
+	}
+	return minhashes;
+}

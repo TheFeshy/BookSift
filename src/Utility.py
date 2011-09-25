@@ -90,8 +90,16 @@ class MaskList():
     def __init__(self):
         import Compare
         import random
+        import Cfg
+        if Cfg.myOptions.useC:
+            import OptimizeCompare
         random.seed(12345)
-        self.masks = array('l',(random.randint(-9223372036854775808,9223372036854775807) for n in xrange(50)))
+        if Cfg.myOptions.useC:
+            self.masks = OptimizeCompare.HashSequence()
+            for n in xrange(100):
+                self.masks.append(random.randint(-9223372036854775808,9223372036854775807))
+        else:
+            self.masks = array('l',(random.randint(-9223372036854775808,9223372036854775807) for n in xrange(50)))
         import random
         #random.seed(12345) #The same as the combination to my luggage!
         #for mask in xrange(50):

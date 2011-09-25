@@ -2,6 +2,7 @@
 %module OptimizeCompare
 %include <std_map.i>
 %include <std_vector.i>
+%include <typemaps.i>
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -14,6 +15,8 @@
 
 float compare(std::vector<long long>&, std::map<long long, long int>&, const int, const int, const int);
 bool moduleworking();
+std::vector<long long> shingle_and_hash(std::vector<long long>&, std::vector<long long>&, const int, const int);
+long long mash_shingles(const std::vector<long long>::iterator, const int);
 
 
 

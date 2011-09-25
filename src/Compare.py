@@ -21,8 +21,8 @@ class MinHashParams():
         self.minhash_tables = minhash_tables
         self.minhash_threshold = minhash_threshold
 
-myMinHashParams = MinHashParams(minhash_tables = 50,
-                                minhash_threshold = 1)
+myMinHashParams = MinHashParams(minhash_tables = 100,
+                                minhash_threshold = 6)
 
 class CompareParams():
     '''Defines a set of comparison parameters to use.  Each parameter is a function, and returns a

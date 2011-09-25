@@ -279,7 +279,7 @@ class LibraryTest(unittest.TestCase):
         self.assertTrue(found)
     def test_medium_minhashexcludes(self): #Minhash must exclude at least some misses!
         testmgr = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
-        testmgr.unpack_archive(max=4)
+        testmgr.unpack_archive(max=10)
         testbook = testmgr.get_testbooks()[0]
         e = zTestDataManager.ErrorMaker()
         dupe = testmgr.make_error_dupes([testbook,], errormaker=e)[0]
