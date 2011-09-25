@@ -594,7 +594,7 @@ class TestBookManager ():
         print 'Worst hit score: {0}'.format(results['worsthit'])
         print 'False Positives: {0}'.format(results['false positive'])
         print 'Average false positive score: {0}'.format(results['fpscore'])
-        print 'Comparisons required: {0}, Comparisons saved: {1}'.format(results['hit']+results['false positive'],self.totalcompares(len(self.relationships) - results['hit']+results['false positive']))
+        print 'Comparisons required: {0}, Out of : {1}'.format(results['hit']+results['false positive'],self.totalcompares(len(self.relationships)))
         print 'Misses: {0} ..................................................'.format(results['miss'])
         print ''.join(map(lambda x:'{0} not matched to {1}\n'.format(x[0][0],x[0][1]),results['misslist']))
         print '=============================================================='

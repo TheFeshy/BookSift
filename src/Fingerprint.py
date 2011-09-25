@@ -120,17 +120,16 @@ class Fingerprint:
 
     def __shingle_and_hash(self, words, shingle_size, minhashes, L_tables):
         for i in xrange(len(words) - shingle_size):
-            shingle = ''.join(words[i:i+shingle_size])
+            shingle = tuple(words[i:i+shingle_size])
             hshingle = hash(shingle)
             for h in xrange(L_tables):
-                #tables[h].append(hshingle ^ Utility.myMasks.masks[h])
                 myhash = hshingle ^ Utility.myMasks.masks[h]
                 if myhash < minhashes[h]:
                     minhashes[h] = myhash
         
     def __generate_minhashes(self,words, shingle_size=5):
         L_tables = Compare.myMinHashParams.minhash_tables
-        minhashes = {n:9223372036854775807 for n in xrange(L_tables)}
+        minhashes = array('l', (9223372036854775807 for n in xrange(L_tables)))
         if len(words) < shingle_size:
             shingle_size = 1
         self.__shingle_and_hash(words, shingle_size, minhashes, L_tables)

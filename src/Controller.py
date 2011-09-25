@@ -31,7 +31,8 @@ def book_compare_helper(bookid1, bookid2, args, kwargs):
     book1 = library.get_book_uid(bookid1)
     book2 = library.get_book_uid(bookid2)
     try:
-        result = book1.compare_with(book2)
+        book1.compare_with(book2)
+        #result = book1.compare_with(book2)
         #if not 'N' == result[0]:
             #library.update_book_uid((book1.id, book2.id))
     except (NotInitialized):

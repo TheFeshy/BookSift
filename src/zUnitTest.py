@@ -321,7 +321,7 @@ class ControllerTest(unittest.TestCase):
         self.testdata = zTestDataManager.TestBookManager('samplebooks.zip','../testbooks/')
         self.testdata.make_testcase(final_number=50)
         import cProfile
-        cProfile.runctx('self.profilethis()', globals(), locals(), 'profiledata')
+        cProfile.runctx('self.profilethis()', globals(), locals(), '../meta/profiledata')
         verification = self.testdata.verify_results(self.library)
         self.testdata.print_formatted_results(verification)
         print 'Total Score: {0:.1%}'.format(zTestDataManager.TestBookManager.combine_results(verification))

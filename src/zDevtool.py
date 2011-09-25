@@ -8,7 +8,6 @@
 import zUnitTest
 import commands
 import os
-import cProfile
 
 class DevToolProblem(Exception):
     def __init__(self,msg):
@@ -130,7 +129,7 @@ if __name__ == '__main__':
             elif 'r' == input:
                 import pstats
                 print '===== Individual time ====='
-                stats = pstats.Stats('profiledata') 
+                stats = pstats.Stats('../meta/profiledata') 
                 stats.strip_dirs().sort_stats('time').print_stats(15)
                 print '===== Cumulitive time ====='   
                 stats.sort_stats('cumulative').print_stats(15)  

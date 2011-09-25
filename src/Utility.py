@@ -87,11 +87,14 @@ def hash_function(n):
 '''
                 
 class MaskList():
-    def __init__(self, max_masks):
-        self.masks = {}
+    def __init__(self):
+        import Compare
+        import random
+        random.seed(12345)
+        self.masks = array('l',(random.randint(-9223372036854775808,9223372036854775807) for n in xrange(50)))
         import random
         #random.seed(12345) #The same as the combination to my luggage!
-        for mask in xrange(0,max_masks):
-            self.masks[mask] = random.getrandbits(64)
+        #for mask in xrange(50):
+        #    self.masks.extend(random.getrandbits(64))
             
-myMasks = MaskList(100)
+myMasks = MaskList()

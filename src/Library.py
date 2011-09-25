@@ -60,7 +60,7 @@ class Library():
         book = self.get_book_uid(uid)
         if book.is_comparable():
             minhashes = book.get_minhashes()
-            for i,h in minhashes.iteritems():
+            for i,h in enumerate(minhashes):
                 if not i in self.__minhashtables.keys():
                     self.__minhashtables[i] = {}
                 if not h in self.__minhashtables[i].keys():
