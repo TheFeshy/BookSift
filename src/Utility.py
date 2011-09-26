@@ -94,10 +94,10 @@ class MaskList():
         if Cfg.myOptions.useC:
             import OptimizeCompare
         random.seed(12345)
-        size = 99
+        size = 50
         if Cfg.myOptions.useC:
             self.masks = OptimizeCompare.HashSequence()
-            for n in xrange(size):
+            for n in xrange(size-1):
                 self.masks.append(random.randint(-9223372036854775808,9223372036854775807))
         else:
             self.masks = array('l',(random.randint(-9223372036854775808,9223372036854775807) for n in xrange(size)))

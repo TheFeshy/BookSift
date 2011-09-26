@@ -9,7 +9,7 @@ from distutils.core import setup, Extension
 
 my_module = Extension('_OptimizeCompare',
                            sources=['OptimizeCompare.i', 'OptimizeCompare.cpp'],
-                           swig_opts=['-c++', '-builtin'] #TODO: try with -builtin for speed!
+                           swig_opts=['-c++', '-builtin']
                            )
 
 setup (name = 'BookSiftOptimize',

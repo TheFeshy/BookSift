@@ -5,7 +5,7 @@ class Options():
         self.useC = False
         try:
             import OptimizeCompare
-            self.useC = OptimizeCompare.moduleworking()
+            #self.useC = OptimizeCompare.moduleworking()
         except:
             pass
         

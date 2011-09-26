@@ -14,6 +14,7 @@ import Cfg
 if Cfg.myOptions.useC:
     import OptimizeCompare
 import Utility
+import operator
 
 class Fingerprint:
     '''Takes the contents of a book (in text form) to initialize'''
@@ -117,13 +118,15 @@ class Fingerprint:
             return OptimizeCompare.HashSequence(uniquewords)
         else:
             return array('l', uniquewords)
-
+        
     def __shingle_and_hash(self, words, shingle_size, L_tables):
         if not Cfg.myOptions.useC:
             minhashes = array('l', (9223372036854775807 for n in xrange(L_tables)))
             for i in xrange(len(words) - shingle_size):
                 shingle = tuple(words[i:i+shingle_size])
                 hshingle = hash(shingle)
+                #I've tried all manner of map() to remove this inner loop; but no luck.
+                #Python's poor "for" statement and super slow xor means this takes over a second per book.
                 for h in xrange(L_tables-1):
                     myhash = hshingle ^ Utility.myMasks.masks[h]
                     if myhash < minhashes[h]:
