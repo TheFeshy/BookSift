@@ -7,4 +7,5 @@
 *.rar
 *.log
 
-/meta
+./meta
+
